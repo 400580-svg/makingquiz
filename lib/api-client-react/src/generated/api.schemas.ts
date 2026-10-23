@@ -106,4 +106,3 @@ export interface DashboardSummary {
 export type GetLeaderboardParams = {
 quizId?: number;
 };
-

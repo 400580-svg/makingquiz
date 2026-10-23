@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useUser } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useSignUp, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { Link, Redirect, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
@@ -15,6 +15,7 @@ import {
   useGetQuiz, useGetQuizQuestions, useHealthCheck, useListQuizzes, useSubmitAttempt,
 } from '@workspace/api-client-react';
 import type { Quiz } from '@workspace/api-client-react';
+import { trackEvent } from '@/lib/analytics';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -231,6 +232,7 @@ function PlayPage() {
     const durationSeconds = Math.min(3600, Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
     submitAttempt.mutate({ data: { quizId, displayName: name, durationSeconds, answers: list.map((item) => ({ questionId: item.id, selectedChoiceId: answers[item.id] })) } }, {
       onSuccess: (attempt) => {
+        trackEvent('quiz_completed');
         void queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
         void queryClient.invalidateQueries({ queryKey: getGetLeaderboardQueryKey() });
         navigate(`/results/${attempt.id}`);
@@ -325,6 +327,9 @@ function LeaderboardPage() {
 }
 
 function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
+  const { signUp } = useSignUp();
+  const signupPendingObserved = useRef(false);
+  const signupEventTracked = useRef(false);
   const returnPathFromQuery = new URLSearchParams(window.location.search).get('redirect_url');
   const returnPath = returnPathFromQuery?.startsWith('/') && !returnPathFromQuery.startsWith('//')
     ? returnPathFromQuery
@@ -333,6 +338,20 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const signInUrl = `${basePath}/sign-in?redirect_url=${encodeURIComponent(returnPath)}`;
   const signUpUrl = `${basePath}/sign-up?redirect_url=${encodeURIComponent(returnPath)}`;
   const isSignUp = mode === 'sign-up';
+  useEffect(() => {
+    if (!isSignUp || !signUp) return;
+
+    if (signUp.status !== 'complete') {
+      signupPendingObserved.current = true;
+      return;
+    }
+
+    if (signupPendingObserved.current && !signupEventTracked.current) {
+      signupEventTracked.current = true;
+      trackEvent('account_created');
+    }
+  }, [isSignUp, signUp?.status]);
+
   return <main className="auth-page">
     <Link href="/" className="auth-brand" data-testid="link-auth-home">
       <span className="auth-brand-mark"><Flag size={21} strokeWidth={2.8} /></span>
