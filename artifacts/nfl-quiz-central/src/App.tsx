@@ -91,7 +91,7 @@ function Shell({ children }: { children: ReactNode }) {
     <header className="topbar">
       <Link href="/" className="brand" data-testid="link-home">
         <span className="brand-mark"><Flag size={20} strokeWidth={2.8} /></span>
-        <span className="brand-word">NFL Quiz Central<small>THE FAN KNOWLEDGE LEAGUE</small></span>
+        <span className="brand-word">Zaiden's Quiz Site<small>THE FAN KNOWLEDGE LEAGUE</small></span>
       </Link>
       <nav className="navlinks" aria-label="Main navigation">
         <Link href="/" className={`nav-link ${location === '/' ? 'active' : ''}`} data-testid="link-discover">Discover</Link>
@@ -100,7 +100,7 @@ function Shell({ children }: { children: ReactNode }) {
       </nav>
     </header>
     {children}
-    <footer className="footer"><span><strong>NFL QUIZ CENTRAL</strong> · Built for the love of the game</span><span>Every down has a story.</span></footer>
+    <footer className="footer"><span><strong>ZAIDEN'S QUIZ SITE</strong> · Built for the love of the game</span><span>Every down has a story.</span></footer>
   </div>;
 }
 
@@ -355,7 +355,7 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   return <main className="auth-page">
     <Link href="/" className="auth-brand" data-testid="link-auth-home">
       <span className="auth-brand-mark"><Flag size={21} strokeWidth={2.8} /></span>
-      <span className="auth-brand-copy">NFL Quiz Central<small>THE FAN KNOWLEDGE LEAGUE</small></span>
+      <span className="auth-brand-copy">Zaiden's Quiz Site<small>THE FAN KNOWLEDGE LEAGUE</small></span>
     </Link>
     <section className="auth-intro">
       <span className="eyebrow">{isSignUp ? 'Your Sunday starts here' : 'Back in the clubhouse'}</span>
