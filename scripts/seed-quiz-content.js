@@ -1,581 +1,1219 @@
-// QA quiz-content seeder: creates the 5 required playbooks with 10 questions each.
-// Idempotent: skips quizzes that already exist (matched by title).
-// Usage: npm run seed:quizzes   (run against the QA DATABASE_URL only)
+// scripts/seed-quiz-content.js
+// QA seed for 5 playbooks x 10 questions (Phase 2 scope).
+// Idempotent: wipes existing quiz content and re-inserts it.
+// The FIRST option in each question's array is the correct answer; the API
+// shuffles option order when serving, so position does not leak answers.
 require('dotenv').config();
 const { pool, query } = require('../db');
 
-const QUIZZES = [
-  {
-    "title": "Super Bowl History & Champions",
-    "category": "Super Bowl",
-    "description": "From SB I to the modern era — champions, MVPs, and memorable moments.",
-    "questions": [
-      {
-        "text": "Which team won the very first Super Bowl (January 1967)?",
-        "opts": [
-          "Green Bay Packers",
-          "Kansas City Chiefs",
-          "Baltimore Colts",
-          "Dallas Cowboys"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "What is the name of the trophy awarded to the Super Bowl winner?",
-        "opts": [
-          "Lombardi Trophy",
-          "Halas Trophy",
-          "Commissioner’s Trophy",
-          "Heisman Trophy"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which quarterback has won the most Super Bowl MVP awards?",
-        "opts": [
-          "Tom Brady",
-          "Patrick Mahomes",
-          "Joe Montana",
-          "Terry Bradshaw"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team finished the 1972 season undefeated and won Super Bowl VII?",
-        "opts": [
-          "Miami Dolphins",
-          "New England Patriots",
-          "Chicago Bears",
-          "San Francisco 49ers"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who headlined the Super Bowl LVII halftime show in 2023?",
-        "opts": [
-          "Rihanna",
-          "The Weeknd",
-          "Dr. Dre",
-          "Shakira"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which Super Bowl was the lowest-scoring in history (13–9 final score)?",
-        "opts": [
-          "LIII (Patriots–Rams)",
-          "XXV (Giants–Bills)",
-          "50 (Broncos–Panthers)",
-          "XXXV (Ravens–Giants)"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which two franchises share the record for most Super Bowl wins (6)?",
-        "opts": [
-          "Patriots and Steelers",
-          "Cowboys and 49ers",
-          "Packers and Giants",
-          "Broncos and Raiders"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which quarterback holds the record for most Super Bowl wins as a starter?",
-        "opts": [
-          "Tom Brady",
-          "Joe Montana",
-          "Terry Bradshaw",
-          "John Elway"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team is famous for losing four consecutive Super Bowls in the early 1990s?",
-        "opts": [
-          "Buffalo Bills",
-          "Minnesota Vikings",
-          "Cleveland Browns",
-          "Detroit Lions"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team was the first wild-card team to win a Super Bowl (SB XV)?",
-        "opts": [
-          "Oakland Raiders",
-          "Denver Broncos",
-          "Baltimore Ravens",
-          "Washington Commanders"
-        ],
-        "correctIdx": 0
-      }
-    ]
-  },
-  {
-    "title": "All-Time Stat Leaders",
-    "category": "Statistics",
-    "description": "The record holders of NFL history — yards, touchdowns, and legends.",
-    "questions": [
-      {
-        "text": "Who is the NFL’s all-time leader in career passing yards?",
-        "opts": [
-          "Tom Brady",
-          "Drew Brees",
-          "Peyton Manning",
-          "Brett Favre"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who holds the NFL record for career rushing yards?",
-        "opts": [
-          "Emmitt Smith",
-          "Walter Payton",
-          "Barry Sanders",
-          "Adrian Peterson"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which receiver is second all-time in career receiving touchdowns?",
-        "opts": [
-          "Randy Moss",
-          "Jerry Rice",
-          "Terrell Owens",
-          "Cris Carter"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which quarterback set the single-season passing touchdown record (55 in 2013)?",
-        "opts": [
-          "Peyton Manning",
-          "Tom Brady",
-          "Aaron Rodgers",
-          "Patrick Mahomes"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who kicked the longest field goal in NFL history (66 yards)?",
-        "opts": [
-          "Justin Tucker",
-          "Matt Prater",
-          "Brett Maher",
-          "Tom Dempsey"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who holds the NFL record for career rushing touchdowns?",
-        "opts": [
-          "Emmitt Smith",
-          "LaDainian Tomlinson",
-          "Marcus Allen",
-          "Jim Brown"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who is the NFL’s all-time leader in receiving yards?",
-        "opts": [
-          "Jerry Rice",
-          "Larry Fitzgerald",
-          "Terrell Owens",
-          "Randy Moss"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who is the official all-time leader in career sacks?",
-        "opts": [
-          "Bruce Smith",
-          "Reggie White",
-          "Kevin Greene",
-          "J.J. Watt"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Who holds the NFL record for career interceptions?",
-        "opts": [
-          "Paul Krause",
-          "Night Train Lane",
-          "Ed Reed",
-          "Rod Woodson"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which player recorded the most 1,000-yard receiving seasons in NFL history?",
-        "opts": [
-          "Jerry Rice",
-          "Randy Moss",
-          "Tony Gonzalez",
-          "Marvin Harrison"
-        ],
-        "correctIdx": 0
-      }
-    ]
-  },
-  {
-    "title": "Franchises, Stadiums & Rivalries",
-    "category": "Franchises",
-    "description": "Teams, iconic venues, and the rivalries that define football.",
-    "questions": [
-      {
-        "text": "Which iconic stadium is the home of the Green Bay Packers?",
-        "opts": [
-          "Lambeau Field",
-          "Soldier Field",
-          "Arrowhead Stadium",
-          "Heinz Field"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which four teams make up the NFC East?",
-        "opts": [
-          "Cowboys, Giants, Eagles, Commanders",
-          "Cowboys, Bears, Eagles, Falcons",
-          "Giants, Jets, Eagles, Ravens",
-          "Commanders, Panthers, Cowboys, Bills"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which rivalry is the oldest in the NFL, dating to 1921?",
-        "opts": [
-          "Bears–Packers",
-          "Cowboys–Giants",
-          "Steelers–Ravens",
-          "Chiefs–Raiders"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which Seattle stadium is famous for its deafening crowd noise?",
-        "opts": [
-          "Lumen Field",
-          "CenturyLink Park",
-          "Space Needle Stadium",
-          "Emerald Field"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team’s stadium features a pirate ship that fires cannons after touchdowns?",
-        "opts": [
-          "Tampa Bay Buccaneers",
-          "Oakland Raiders",
-          "Jacksonville Jaguars",
-          "Las Vegas Raiders"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which franchise is named after a poem by Edgar Allan Poe?",
-        "opts": [
-          "Baltimore Ravens",
-          "Seattle Seahawks",
-          "Philadelphia Eagles",
-          "Arizona Cardinals"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team hosts at least one home game in London nearly every season?",
-        "opts": [
-          "Jacksonville Jaguars",
-          "Miami Dolphins",
-          "Buffalo Bills",
-          "Carolina Panthers"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which franchise relocated to Las Vegas in 2020?",
-        "opts": [
-          "Raiders",
-          "Chargers",
-          "Rams",
-          "Cardinals"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team plays its home games at Arrowhead Stadium?",
-        "opts": [
-          "Kansas City Chiefs",
-          "Dallas Cowboys",
-          "Cincinnati Bengals",
-          "Tennessee Titans"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which NFL city has hosted a team continuously since 1925 without ever winning a Super Bowl?",
-        "opts": [
-          "Detroit",
-          "Buffalo",
-          "Cleveland",
-          "Houston"
-        ],
-        "correctIdx": 0
-      }
-    ]
-  },
-  {
-    "title": "Rules, Formations & Tactics",
-    "category": "Rules",
-    "description": "Know the game — scoring, penalties, and defensive schemes.",
-    "questions": [
-      {
-        "text": "How many points is a touchdown worth?",
-        "opts": [
-          "6",
-          "7",
-          "3",
-          "5"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "How many points does a kicked extra point add after a touchdown?",
-        "opts": [
-          "1",
-          "2",
-          "3",
-          "0"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which penalty results in a 15-yard loss?",
-        "opts": [
-          "Roughing the passer",
-          "False start",
-          "Offsides",
-          "Illegal formation"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "How many points is a safety worth?",
-        "opts": [
-          "2",
-          "3",
-          "1",
-          "6"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "What is the line of scrimmage?",
-        "opts": [
-          "The imaginary line where a play begins",
-          "The goal line",
-          "The first-down marker",
-          "The sideline"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "In a 3-4 defense, what do the numbers refer to?",
-        "opts": [
-          "3 defensive linemen and 4 linebackers",
-          "3 cornerbacks and 4 safeties",
-          "3 downlinemen and 4 blitzes",
-          "3rd down and 4th quarter"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "How many points is a made field goal worth?",
-        "opts": [
-          "3",
-          "2",
-          "4",
-          "1"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "How many points is a successful two-point conversion worth?",
-        "opts": [
-          "2",
-          "1",
-          "3",
-          "6"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "In NFL overtime, what happens if the receiving team scores a touchdown on its first possession?",
-        "opts": [
-          "The game immediately ends",
-          "The other team gets the ball",
-          "Play continues to a second OT series",
-          "A coin toss decides"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "How many offensive downs does a team get to earn a first down?",
-        "opts": [
-          "4",
-          "3",
-          "5",
-          "2"
-        ],
-        "correctIdx": 0
-      }
-    ]
-  },
-  {
-    "title": "NFL Draft & Franchise Legends",
-    "category": "Draft",
-    "description": "Draft history and the players who became franchise icons.",
-    "questions": [
-      {
-        "text": "Which quarterback was drafted #1 overall by the Colts in 1998?",
-        "opts": [
-          "Peyton Manning",
-          "Ryan Leaf",
-          "Akili Smith",
-          "Tim Couch"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "What nickname is given to the final pick of the NFL Draft?",
-        "opts": [
-          "Mr. Irrelevant",
-          "Mr. Irreplaceable",
-          "The Finalist",
-          "Mr. Number One"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which quarterback was drafted 199th overall in the 2000 Draft?",
-        "opts": [
-          "Tom Brady",
-          "Aaron Rodgers",
-          "Dak Prescott",
-          "Russell Wilson"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which head coach holds the NFL record for most career wins?",
-        "opts": [
-          "Don Shula",
-          "Bill Belichick",
-          "George Halas",
-          "Tom Landry"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which linebacker is widely considered the greatest defensive player in NFL history?",
-        "opts": [
-          "Lawrence Taylor",
-          "Ray Lewis",
-          "Reggie White",
-          "Dick Butkus"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "How many rounds does the modern NFL Draft have?",
-        "opts": [
-          "7",
-          "5",
-          "6",
-          "12"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which team drafted Tom Brady in 2000?",
-        "opts": [
-          "New England Patriots",
-          "Green Bay Packers",
-          "New York Giants",
-          "San Francisco 49ers"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "With which franchise did Joe Montana win four Super Bowls?",
-        "opts": [
-          "San Francisco 49ers",
-          "Kansas City Chiefs",
-          "Dallas Cowboys",
-          "Oakland Raiders"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "Which franchise is Dan Marino most associated with?",
-        "opts": [
-          "Miami Dolphins",
-          "Buffalo Bills",
-          "New York Jets",
-          "Pittsburgh Steelers"
-        ],
-        "correctIdx": 0
-      },
-      {
-        "text": "In which city is the NFL Scouting Combine held each year?",
-        "opts": [
-          "Indianapolis",
-          "Chicago",
-          "New York",
-          "Atlanta"
-        ],
-        "correctIdx": 0
-      }
-    ]
-  }
-];
+async function seed() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM quizzes'); // cascades to questions + options
 
-(async () => {
-  const admin = await query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
-  if (admin.rows.length === 0) {
-    console.error('No admin user found. Run seed.sql first.'); process.exit(1);
-  }
-  const creatorId = admin.rows[0].id;
-
-  for (const quiz of QUIZZES) {
-    const exists = await query('SELECT id FROM quizzes WHERE title = $1', [quiz.title]);
-    if (exists.rows.length > 0) {
-      console.log('skip (exists):', quiz.title);
-      continue;
-    }
-    const created = await query(
+    // ---- Quiz 1: Football Basics: Points & Penalties ----
+    const quiz0 = await client.query(
       `INSERT INTO quizzes (creator_id, title, category, description, is_public)
-       VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
-      [creatorId, quiz.title, quiz.category, quiz.description]
+       SELECT id, 'Football Basics: Points & Penalties', 'Rules Basics', 'The simple stuff — how points work and what penalties mean.', TRUE
+       FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1
+       RETURNING id`
     );
-    const quizId = created.rows[0].id;
-    for (const question of quiz.questions) {
-      const inserted = await query(
-        `INSERT INTO questions (quiz_id, question_text) VALUES ($1, $2) RETURNING id`,
-        [quizId, question.text]
+    { // Q1.1
+      const q0_0 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many points is a touchdown worth?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
       );
-      const questionId = inserted.rows[0].id;
-      for (let i = 0; i < question.opts.length; i++) {
-        await query(
-          'INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)',
-          [questionId, question.opts[i], i === question.correctIdx]
-        );
-      }
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6', TRUE)`,
+        [q0_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '3', FALSE)`,
+        [q0_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '7', FALSE)`,
+        [q0_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '2', FALSE)`,
+        [q0_0.rows[0].id]
+      );
     }
-    console.log('seeded:', quiz.title);
+    { // Q1.2
+      const q0_1 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'After a touchdown, how many points does an extra point kick add?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1', TRUE)`,
+        [q0_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '2', FALSE)`,
+        [q0_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '3', FALSE)`,
+        [q0_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6', FALSE)`,
+        [q0_1.rows[0].id]
+      );
+    }
+    { // Q1.3
+      const q0_2 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many points is a field goal worth?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '3', TRUE)`,
+        [q0_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '2', FALSE)`,
+        [q0_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6', FALSE)`,
+        [q0_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '7', FALSE)`,
+        [q0_2.rows[0].id]
+      );
+    }
+    { // Q1.4
+      const q0_3 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many points does a safety give the scoring team?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '2', TRUE)`,
+        [q0_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '3', FALSE)`,
+        [q0_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6', FALSE)`,
+        [q0_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1', FALSE)`,
+        [q0_3.rows[0].id]
+      );
+    }
+    { // Q1.5
+      const q0_4 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many points is a two-point conversion worth?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '2', TRUE)`,
+        [q0_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1', FALSE)`,
+        [q0_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '3', FALSE)`,
+        [q0_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6', FALSE)`,
+        [q0_4.rows[0].id]
+      );
+    }
+    { // Q1.6
+      const q0_5 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many yards is a typical penalty for holding?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '10', TRUE)`,
+        [q0_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '5', FALSE)`,
+        [q0_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '15', FALSE)`,
+        [q0_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '20', FALSE)`,
+        [q0_5.rows[0].id]
+      );
+    }
+    { // Q1.7
+      const q0_6 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many yards is the penalty for roughing the passer?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '15', TRUE)`,
+        [q0_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '10', FALSE)`,
+        [q0_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '5', FALSE)`,
+        [q0_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '25', FALSE)`,
+        [q0_6.rows[0].id]
+      );
+    }
+    { // Q1.8
+      const q0_7 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many yards is the penalty for a facemask foul?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '15', TRUE)`,
+        [q0_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '5', FALSE)`,
+        [q0_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '10', FALSE)`,
+        [q0_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '20', FALSE)`,
+        [q0_7.rows[0].id]
+      );
+    }
+    { // Q1.9
+      const q0_8 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'What is the maximum number of yards needed for a first down?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '10', TRUE)`,
+        [q0_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '5', FALSE)`,
+        [q0_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '15', FALSE)`,
+        [q0_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '20', FALSE)`,
+        [q0_8.rows[0].id]
+      );
+    }
+    { // Q1.10
+      const q0_9 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many yards is the penalty for a false start?', TRUE) RETURNING id`,
+        [quiz0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '5', TRUE)`,
+        [q0_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '10', FALSE)`,
+        [q0_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '15', FALSE)`,
+        [q0_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'loss of down', FALSE)`,
+        [q0_9.rows[0].id]
+      );
+    }
+
+    // ---- Quiz 2: Super Bowl History & Champions ----
+    const quiz1 = await client.query(
+      `INSERT INTO quizzes (creator_id, title, category, description, is_public)
+       SELECT id, 'Super Bowl History & Champions', 'Super Bowl', 'Super Bowl legends, records, and memorable moments.', TRUE
+       FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1
+       RETURNING id`
+    );
+    { // Q2.1
+      const q1_0 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team won the very first Super Bowl?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Green Bay Packers', TRUE)`,
+        [q1_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Kansas City Chiefs', FALSE)`,
+        [q1_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'New York Jets', FALSE)`,
+        [q1_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Baltimore Colts', FALSE)`,
+        [q1_0.rows[0].id]
+      );
+    }
+    { // Q2.2
+      const q1_1 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'After whom is the Super Bowl trophy named?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Vince Lombardi', TRUE)`,
+        [q1_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Pete Rozelle', FALSE)`,
+        [q1_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'George Halas', FALSE)`,
+        [q1_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Lamar Hunt', FALSE)`,
+        [q1_1.rows[0].id]
+      );
+    }
+    { // Q2.3
+      const q1_2 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which quarterback has won the most Super Bowl MVP awards?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tom Brady', TRUE)`,
+        [q1_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Joe Montana', FALSE)`,
+        [q1_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Patrick Mahomes', FALSE)`,
+        [q1_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Peyton Manning', FALSE)`,
+        [q1_2.rows[0].id]
+      );
+    }
+    { // Q2.4
+      const q1_3 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team had the NFL’s only perfect season (17-0)?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1972 Miami Dolphins', TRUE)`,
+        [q1_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1985 Chicago Bears', FALSE)`,
+        [q1_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '2007 New England Patriots', FALSE)`,
+        [q1_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1991 Washington', FALSE)`,
+        [q1_3.rows[0].id]
+      );
+    }
+    { // Q2.5
+      const q1_4 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which Super Bowl was the lowest-scoring ever (13-3)?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Super Bowl LIII', TRUE)`,
+        [q1_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Super Bowl XL', FALSE)`,
+        [q1_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Super Bowl XXXV', FALSE)`,
+        [q1_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Super Bowl IX', FALSE)`,
+        [q1_4.rows[0].id]
+      );
+    }
+    { // Q2.6
+      const q1_5 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who performed the halftime show at Super Bowl LVII?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Rihanna', TRUE)`,
+        [q1_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Beyoncé', FALSE)`,
+        [q1_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'The Weeknd', FALSE)`,
+        [q1_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Dr. Dre', FALSE)`,
+        [q1_5.rows[0].id]
+      );
+    }
+    { // Q2.7
+      const q1_6 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team has appeared in the most Super Bowls?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'New England Patriots', TRUE)`,
+        [q1_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Pittsburgh Steelers', FALSE)`,
+        [q1_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Dallas Cowboys', FALSE)`,
+        [q1_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Denver Broncos', FALSE)`,
+        [q1_6.rows[0].id]
+      );
+    }
+    { // Q2.8
+      const q1_7 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'How many Super Bowls did Tom Brady win as a starting QB?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '7', TRUE)`,
+        [q1_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '5', FALSE)`,
+        [q1_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6', FALSE)`,
+        [q1_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '4', FALSE)`,
+        [q1_7.rows[0].id]
+      );
+    }
+    { // Q2.9
+      const q1_8 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who kicked the game-winning field goal at the end of Super Bowl XXXVI?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Adam Vinatieri', TRUE)`,
+        [q1_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Stephen Gostkowski', FALSE)`,
+        [q1_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Justin Tucker', FALSE)`,
+        [q1_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Mason Crosby', FALSE)`,
+        [q1_8.rows[0].id]
+      );
+    }
+    { // Q2.10
+      const q1_9 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team won Super Bowl LIV to end a 50-year championship drought?', TRUE) RETURNING id`,
+        [quiz1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Kansas City Chiefs', TRUE)`,
+        [q1_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'San Francisco 49ers', FALSE)`,
+        [q1_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Los Angeles Rams', FALSE)`,
+        [q1_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Cincinnati Bengals', FALSE)`,
+        [q1_9.rows[0].id]
+      );
+    }
+
+    // ---- Quiz 3: All-Time Stat Leaders ----
+    const quiz2 = await client.query(
+      `INSERT INTO quizzes (creator_id, title, category, description, is_public)
+       SELECT id, 'All-Time Stat Leaders', 'Records', 'The greatest statistical careers in NFL history.', TRUE
+       FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1
+       RETURNING id`
+    );
+    { // Q3.1
+      const q2_0 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who holds the NFL record for career passing yards?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tom Brady', TRUE)`,
+        [q2_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Drew Brees', FALSE)`,
+        [q2_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Peyton Manning', FALSE)`,
+        [q2_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Brett Favre', FALSE)`,
+        [q2_0.rows[0].id]
+      );
+    }
+    { // Q3.2
+      const q2_1 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who is the NFL’s all-time leading rusher?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Emmitt Smith', TRUE)`,
+        [q2_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Walter Payton', FALSE)`,
+        [q2_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Barry Sanders', FALSE)`,
+        [q2_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Frank Gore', FALSE)`,
+        [q2_1.rows[0].id]
+      );
+    }
+    { // Q3.3
+      const q2_2 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who holds the record for career receiving touchdowns?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Randy Moss', TRUE)`,
+        [q2_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Jerry Rice', FALSE)`,
+        [q2_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Terrell Owens', FALSE)`,
+        [q2_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Antonio Gates', FALSE)`,
+        [q2_2.rows[0].id]
+      );
+    }
+    { // Q3.4
+      const q2_3 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who threw the most career touchdown passes?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tom Brady', TRUE)`,
+        [q2_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Peyton Manning', FALSE)`,
+        [q2_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Drew Brees', FALSE)`,
+        [q2_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Aaron Rodgers', FALSE)`,
+        [q2_3.rows[0].id]
+      );
+    }
+    { // Q3.5
+      const q2_4 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who kicked the longest field goal in NFL history (66 yards)?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Justin Tucker', TRUE)`,
+        [q2_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Matt Prater', FALSE)`,
+        [q2_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tom Dempsey', FALSE)`,
+        [q2_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Jason Elam', FALSE)`,
+        [q2_4.rows[0].id]
+      );
+    }
+    { // Q3.6
+      const q2_5 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who holds the record for most career receptions?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Larry Fitzgerald', TRUE)`,
+        [q2_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Jerry Rice', FALSE)`,
+        [q2_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tony Gonzalez', FALSE)`,
+        [q2_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Jason Witten', FALSE)`,
+        [q2_5.rows[0].id]
+      );
+    }
+    { // Q3.7
+      const q2_6 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which quarterback has the most career rushing yards?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Lamar Jackson', TRUE)`,
+        [q2_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Michael Vick', FALSE)`,
+        [q2_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Cam Newton', FALSE)`,
+        [q2_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Randall Cunningham', FALSE)`,
+        [q2_6.rows[0].id]
+      );
+    }
+    { // Q3.8
+      const q2_7 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who holds the single-season sack record (22.5)?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'T.J. Watt', TRUE)`,
+        [q2_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Michael Strahan', FALSE)`,
+        [q2_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Aaron Donald', FALSE)`,
+        [q2_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'J.J. Watt', FALSE)`,
+        [q2_7.rows[0].id]
+      );
+    }
+    { // Q3.9
+      const q2_8 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who holds the record for most career interceptions?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Paul Krause', TRUE)`,
+        [q2_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Ed Reed', FALSE)`,
+        [q2_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Rod Woodson', FALSE)`,
+        [q2_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Night Train Lane', FALSE)`,
+        [q2_8.rows[0].id]
+      );
+    }
+    { // Q3.10
+      const q2_9 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who scored the most total touchdowns in NFL history?', TRUE) RETURNING id`,
+        [quiz2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Jerry Rice', TRUE)`,
+        [q2_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Emmitt Smith', FALSE)`,
+        [q2_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'LaDainian Tomlinson', FALSE)`,
+        [q2_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Jim Brown', FALSE)`,
+        [q2_9.rows[0].id]
+      );
+    }
+
+    // ---- Quiz 4: Franchises, Stadiums & Rivalries ----
+    const quiz3 = await client.query(
+      `INSERT INTO quizzes (creator_id, title, category, description, is_public)
+       SELECT id, 'Franchises, Stadiums & Rivalries', 'Teams', 'Teams, their homes, and the rivalries that define them.', TRUE
+       FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1
+       RETURNING id`
+    );
+    { // Q4.1
+      const q3_0 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'What is the home stadium of the Green Bay Packers?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Lambeau Field', TRUE)`,
+        [q3_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Soldier Field', FALSE)`,
+        [q3_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Ford Field', FALSE)`,
+        [q3_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'U.S. Bank Stadium', FALSE)`,
+        [q3_0.rows[0].id]
+      );
+    }
+    { // Q4.2
+      const q3_1 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which division contains the Cowboys, Eagles, Giants, and Commanders?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'NFC East', TRUE)`,
+        [q3_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'NFC North', FALSE)`,
+        [q3_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'AFC East', FALSE)`,
+        [q3_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'NFC South', FALSE)`,
+        [q3_1.rows[0].id]
+      );
+    }
+    { // Q4.3
+      const q3_2 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team plays its home games at Lumen Field?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Seattle Seahawks', TRUE)`,
+        [q3_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Denver Broncos', FALSE)`,
+        [q3_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Arizona Cardinals', FALSE)`,
+        [q3_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Las Vegas Raiders', FALSE)`,
+        [q3_2.rows[0].id]
+      );
+    }
+    { // Q4.4
+      const q3_3 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which two teams share the NFL’s longest-running rivalry?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Bears and Packers', TRUE)`,
+        [q3_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Cowboys and Eagles', FALSE)`,
+        [q3_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Chiefs and Raiders', FALSE)`,
+        [q3_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Giants and Eagles', FALSE)`,
+        [q3_3.rows[0].id]
+      );
+    }
+    { // Q4.5
+      const q3_4 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'What feature celebrates touchdowns at the Buccaneers’ home stadium?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'A pirate ship', TRUE)`,
+        [q3_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'A lighthouse', FALSE)`,
+        [q3_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'A steamboat', FALSE)`,
+        [q3_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'A bull statue', FALSE)`,
+        [q3_4.rows[0].id]
+      );
+    }
+    { // Q4.6
+      const q3_5 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team is known as "Da Bears"?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Chicago Bears', TRUE)`,
+        [q3_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Cincinnati Bengals', FALSE)`,
+        [q3_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Chicago Cardinals', FALSE)`,
+        [q3_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Detroit Lions', FALSE)`,
+        [q3_5.rows[0].id]
+      );
+    }
+    { // Q4.7
+      const q3_6 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which stadium is nicknamed "The Frozen Tundra"?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Lambeau Field', TRUE)`,
+        [q3_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Highmark Stadium', FALSE)`,
+        [q3_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Soldier Field', FALSE)`,
+        [q3_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Gillette Stadium', FALSE)`,
+        [q3_6.rows[0].id]
+      );
+    }
+    { // Q4.8
+      const q3_7 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team moved from San Diego to Los Angeles?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Chargers', TRUE)`,
+        [q3_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Rams', FALSE)`,
+        [q3_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Raiders', FALSE)`,
+        [q3_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '49ers', FALSE)`,
+        [q3_7.rows[0].id]
+      );
+    }
+    { // Q4.9
+      const q3_8 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team plays at Arrowhead Stadium?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Kansas City Chiefs', TRUE)`,
+        [q3_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Buffalo Bills', FALSE)`,
+        [q3_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tennessee Titans', FALSE)`,
+        [q3_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Houston Texans', FALSE)`,
+        [q3_8.rows[0].id]
+      );
+    }
+    { // Q4.10
+      const q3_9 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'The "Battle of Texas" is between the Cowboys and which team?', TRUE) RETURNING id`,
+        [quiz3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Houston Texans', TRUE)`,
+        [q3_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tennessee Titans', FALSE)`,
+        [q3_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Kansas City Chiefs', FALSE)`,
+        [q3_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'New Orleans Saints', FALSE)`,
+        [q3_9.rows[0].id]
+      );
+    }
+
+    // ---- Quiz 5: NFL Draft & Franchise Legends ----
+    const quiz4 = await client.query(
+      `INSERT INTO quizzes (creator_id, title, category, description, is_public)
+       SELECT id, 'NFL Draft & Franchise Legends', 'Draft', 'Draft history and the players who defined franchises.', TRUE
+       FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1
+       RETURNING id`
+    );
+    { // Q5.1
+      const q4_0 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who was the #1 overall pick of the 1998 NFL Draft?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Peyton Manning', TRUE)`,
+        [q4_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Ryan Leaf', FALSE)`,
+        [q4_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Charles Woodson', FALSE)`,
+        [q4_0.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Marshall Faulk', FALSE)`,
+        [q4_0.rows[0].id]
+      );
+    }
+    { // Q5.2
+      const q4_1 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'What is the nickname given to the last pick of the NFL Draft?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Mr. Irrelevant', TRUE)`,
+        [q4_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Mr. Underdog', FALSE)`,
+        [q4_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'The Final Pick', FALSE)`,
+        [q4_1.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Rookie Zero', FALSE)`,
+        [q4_1.rows[0].id]
+      );
+    }
+    { // Q5.3
+      const q4_2 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'In which round was Tom Brady drafted?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '6th round', TRUE)`,
+        [q4_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '1st round', FALSE)`,
+        [q4_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, '3rd round', FALSE)`,
+        [q4_2.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Undrafted', FALSE)`,
+        [q4_2.rows[0].id]
+      );
+    }
+    { // Q5.4
+      const q4_3 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which coach holds the record for most career wins?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Don Shula', TRUE)`,
+        [q4_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Bill Belichick', FALSE)`,
+        [q4_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'George Halas', FALSE)`,
+        [q4_3.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Tom Landry', FALSE)`,
+        [q4_3.rows[0].id]
+      );
+    }
+    { // Q5.5
+      const q4_4 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which linebacker is widely considered the greatest defensive player ever?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Lawrence Taylor', TRUE)`,
+        [q4_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Ray Lewis', FALSE)`,
+        [q4_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Reggie White', FALSE)`,
+        [q4_4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Dick Butkus', FALSE)`,
+        [q4_4.rows[0].id]
+      );
+    }
+    { // Q5.6
+      const q4_5 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team drafted Brett Favre before trading him to Green Bay?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Atlanta Falcons', TRUE)`,
+        [q4_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Green Bay Packers', FALSE)`,
+        [q4_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'New York Jets', FALSE)`,
+        [q4_5.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Denver Broncos', FALSE)`,
+        [q4_5.rows[0].id]
+      );
+    }
+    { // Q5.7
+      const q4_6 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Who was the #1 overall pick in the 2023 NFL Draft?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Bryce Young', TRUE)`,
+        [q4_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'C.J. Stroud', FALSE)`,
+        [q4_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Will Anderson Jr.', FALSE)`,
+        [q4_6.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Anthony Richardson', FALSE)`,
+        [q4_6.rows[0].id]
+      );
+    }
+    { // Q5.8
+      const q4_7 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which running back did the Chargers draft #5 overall in 2001?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'LaDainian Tomlinson', TRUE)`,
+        [q4_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Priest Holmes', FALSE)`,
+        [q4_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Shaun Alexander', FALSE)`,
+        [q4_7.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Adrian Peterson', FALSE)`,
+        [q4_7.rows[0].id]
+      );
+    }
+    { // Q5.9
+      const q4_8 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'Which team drafted and never released Joe Montana... until trading him in 1993?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'San Francisco 49ers', TRUE)`,
+        [q4_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Kansas City Chiefs', FALSE)`,
+        [q4_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Dallas Cowboys', FALSE)`,
+        [q4_8.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Chicago Bears', FALSE)`,
+        [q4_8.rows[0].id]
+      );
+    }
+    { // Q5.10
+      const q4_9 = await client.query(
+        `INSERT INTO questions (quiz_id, question_text, is_active)
+         VALUES ($1, 'What is the name of the event where draft prospects show off their skills before the Draft?', TRUE) RETURNING id`,
+        [quiz4.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'The NFL Scouting Combine', TRUE)`,
+        [q4_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'The Rookie Showcase', FALSE)`,
+        [q4_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Draft Camp', FALSE)`,
+        [q4_9.rows[0].id]
+      );
+      await client.query(
+        `INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, 'Pro Day Finals', FALSE)`,
+        [q4_9.rows[0].id]
+      );
+    }
+
+    await client.query('COMMIT');
+    const { rows } = await client.query('SELECT COUNT(*)::int AS quizzes FROM quizzes');
+    const q = await client.query('SELECT COUNT(*)::int AS questions FROM questions');
+    console.log(`Seeded ${rows[0].quizzes} quizzes and ${q.rows[0].questions} questions.`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Seed failed:', err.message);
+    process.exitCode = 1;
+  } finally {
+    client.release();
+    await pool.end();
   }
-  await pool.end();
-  console.log('Quiz content seeding complete.');
-})().catch((err) => { console.error(err.message); process.exit(1); });
+}
+
+seed();
