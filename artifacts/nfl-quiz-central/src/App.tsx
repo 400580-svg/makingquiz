@@ -10,8 +10,8 @@ import {
   Flag, Medal, RefreshCw, ShieldAlert, Sparkles, Trophy, Users, Zap,
 } from 'lucide-react';
 import {
-  getGetAttemptQueryKey, getGetDashboardSummaryQueryKey, getGetLeaderboardQueryKey, getGetQuizQueryKey, getGetQuizQuestionsQueryKey,
-  useGetAttempt, useGetDashboardSummary, useGetLeaderboard,
+  getGetAttemptQueryKey, getGetDashboardSummaryQueryKey, getGetLeaderboardQueryKey, getGetMyAttemptsQueryKey, getGetQuizQueryKey, getGetQuizQuestionsQueryKey,
+  useGetAttempt, useGetDashboardSummary, useGetLeaderboard, useGetMyAttempts,
   useGetQuiz, useGetQuizQuestions, useHealthCheck, useListQuizzes, useSubmitAttempt,
 } from '@workspace/api-client-react';
 import type { Quiz } from '@workspace/api-client-react';
@@ -109,7 +109,10 @@ function AccountActions() {
   const { signOut } = useClerk();
   if (!isLoaded) return null;
   if (isSignedIn) {
-    return <button className="nav-link nav-signout" onClick={() => void signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out">Sign out</button>;
+    return <>
+      <Link href="/my-scores" className="nav-link" data-testid="link-my-scores">My scores</Link>
+      <button className="nav-link nav-signout" onClick={() => void signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out">Sign out</button>
+    </>;
   }
   return <div className="nav-account">
     <Link href="/sign-in" className="nav-link nav-account-signin" data-testid="link-sign-in">Sign in</Link>
@@ -314,15 +317,45 @@ function LeaderboardPage() {
     <div className="page-heading"><div><span className="eyebrow">The clubhouse scoreboard</span><h1 className="headline">Legends in the <em>making.</em></h1><p className="subhead">The sharpest football minds are putting their knowledge on the line. Where will your name land?</p></div><div className="category-pill"><Users size={13} /> Fan leaderboard</div></div>
     {leaderboard.isLoading ? <div className="leaderboard-wrap"><div className="skeleton" style={{ height: 350 }} data-testid="status-leaderboard-loading" /></div> : leaderboard.isError ? <ErrorState onRetry={() => leaderboard.refetch()} label="The scoreboard is temporarily unavailable." /> : !leaderboard.data?.length ? <EmptyState title="A clean scoreboard" message="No scores have been posted yet. Play a quiz and claim the first spot." /> : <div className="leaderboard-wrap" data-testid="leaderboard-table">
       <div className="leaderboard-head"><span>Rank</span><span>Fan</span><span>Quiz played</span><span>Score</span><span>Accuracy</span><span>When</span></div>
-      {leaderboard.data.map((entry) => <Link href={`/results/${entry.attemptId}`} className="leader-row" key={entry.attemptId} data-testid={`row-leaderboard-${entry.attemptId}`}>
+      {leaderboard.data.map((entry) => <div className="leader-row" key={entry.attemptId} data-testid={`row-leaderboard-${entry.attemptId}`}>
         <span className={`rank ${entry.rank === 1 ? 'one' : ''}`}>{String(entry.rank).padStart(2, '0')}{entry.rank === 1 && <Medal size={15} style={{ marginLeft: 4, verticalAlign: 'middle' }} />}</span>
         <span className="player"><span className="player-avatar">{entry.displayName.slice(0, 2).toUpperCase()}</span>{entry.displayName}</span>
         <span className="leader-quiz">{entry.quizTitle}</span><span className="score-cell">{entry.correctAnswers}/{entry.totalQuestions}</span>
         <span className="score-chip">{entry.percentCorrect}%</span><span className="date-cell">{new Date(entry.completedAt).toLocaleDateString()}</span>
-      </Link>)}
+      </div>)}
     </div>}
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 22, color: '#81877f', fontSize: 12 }}><Award size={17} color="#ba8122" /> Every score is earned one question at a time.</div>
     <div style={{ marginTop: 32 }}><Link href="/" className="btn ghost small" data-testid="link-leaderboard-home"><BarChart3 size={14} /> Explore quizzes <ChevronRight size={14} /></Link></div>
+  </main>;
+}
+
+function MyScoresPage() {
+  const attempts = useGetMyAttempts({ query: { queryKey: getGetMyAttemptsQueryKey(), refetchOnMount: 'always' } });
+  return <main className="page">
+    <div className="page-heading">
+      <div><span className="eyebrow">Your personal scoreboard</span><h1 className="headline">Every game. <em>Your progress.</em></h1><p className="subhead">Your saved quiz scores and answer reviews, all in one place.</p></div>
+      <div className="category-pill"><Trophy size={13} /> My scores</div>
+    </div>
+    {attempts.isLoading
+      ? <div className="leaderboard-wrap"><div className="skeleton" style={{ height: 260 }} data-testid="status-my-scores-loading" /></div>
+      : attempts.isError
+        ? <ErrorState onRetry={() => attempts.refetch()} label="Your score history is temporarily unavailable." />
+        : !attempts.data?.length
+          ? <div className="state-panel" data-testid="status-my-scores-empty">
+            <Trophy size={28} /><h3>Your season starts here</h3><p>Play your first quiz and your score and answer review will be saved here.</p>
+            <Link href="/" className="btn gold small" data-testid="link-start-first-quiz">Find a quiz <ArrowRight size={14} /></Link>
+          </div>
+          : <div className="leaderboard-wrap" data-testid="my-scores-list">
+            <div className="leaderboard-head my-scores-head"><span>Quiz played</span><span>Score</span><span>Accuracy</span><span>When</span><span>Review</span></div>
+            {attempts.data.map((attempt) => <div className="leader-row my-scores-row" key={attempt.attemptId} data-testid={`row-my-score-${attempt.attemptId}`}>
+              <span className="leader-quiz">{attempt.quizTitle}</span>
+              <span className="score-cell">{attempt.correctAnswers}/{attempt.totalQuestions}</span>
+              <span className="score-chip">{attempt.percentCorrect}%</span>
+              <span className="date-cell">{new Date(attempt.completedAt).toLocaleDateString()}</span>
+              <Link href={`/results/${attempt.attemptId}`} className="btn ghost small" data-testid={`link-review-score-${attempt.attemptId}`}>Open review <ChevronRight size={14} /></Link>
+            </div>)}
+          </div>}
+    <div style={{ marginTop: 25 }}><Link href="/" className="btn ghost small" data-testid="link-my-scores-home"><ArrowLeft size={14} /> Explore quizzes</Link></div>
   </main>;
 }
 
@@ -405,6 +438,10 @@ function LeaderboardRoute() {
   return <Shell><LeaderboardPage /></Shell>;
 }
 
+function MyScoresRoute() {
+  return <ProtectedRoute><MyScoresPage /></ProtectedRoute>;
+}
+
 function NotFoundRoute() {
   return <Shell><NotFound /></Shell>;
 }
@@ -436,6 +473,7 @@ function Router() {
     <Route path="/play/:quizId" component={PlayRoute} />
     <Route path="/results/:attemptId" component={ResultsRoute} />
     <Route path="/leaderboard" component={LeaderboardRoute} />
+    <Route path="/my-scores" component={MyScoresRoute} />
     <Route component={NotFoundRoute} />
   </Switch>;
 }

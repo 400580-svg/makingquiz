@@ -82,6 +82,10 @@ export const quizAttemptsTable = pgTable(
       table.correctAnswers,
       table.durationSeconds,
     ),
+    index("quiz_attempts_user_history_idx").on(
+      table.clerkUserId,
+      table.completedAt,
+    ),
   ],
 );
 

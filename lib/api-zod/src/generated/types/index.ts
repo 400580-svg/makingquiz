@@ -14,6 +14,7 @@ export * from './dashboardSummary';
 export * from './getLeaderboardParams';
 export * from './healthStatus';
 export * from './leaderboardEntry';
+export * from './myAttemptEntry';
 export * from './quiz';
 export * from './quizChoice';
 export * from './quizDifficulty';

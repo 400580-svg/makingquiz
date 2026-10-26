@@ -83,6 +83,17 @@ export interface AttemptResult {
   answers: ScoredAnswer[];
 }
 
+export interface MyAttemptEntry {
+  attemptId: number;
+  quizId: number;
+  quizTitle: string;
+  correctAnswers: number;
+  totalQuestions: number;
+  percentCorrect: number;
+  durationSeconds: number;
+  completedAt: string;
+}
+
 export interface LeaderboardEntry {
   rank: number;
   attemptId: number;

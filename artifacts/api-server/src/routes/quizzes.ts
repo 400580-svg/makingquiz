@@ -12,6 +12,7 @@ import {
   GetDashboardSummaryResponse,
   GetLeaderboardQueryParams,
   GetLeaderboardResponse,
+  GetMyAttemptsResponse,
   GetQuizParams,
   GetQuizQuestionsParams,
   GetQuizQuestionsResponse,
@@ -21,7 +22,7 @@ import {
   SubmitAttemptResponse,
 } from "@workspace/api-zod";
 import { getAuth } from "@clerk/express";
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter, type RequestHandler } from "express";
 
 const router: IRouter = Router();
@@ -242,10 +243,42 @@ router.post("/attempts", async (req, res): Promise<void> => {
   );
 });
 
+router.get("/attempts/mine", requireSignedIn, async (req, res): Promise<void> => {
+  const userId = getAuth(req).userId;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to view saved scores" });
+    return;
+  }
+
+  const attempts = await db
+    .select({
+      attemptId: quizAttemptsTable.id,
+      quizId: quizAttemptsTable.quizId,
+      quizTitle: quizzesTable.title,
+      correctAnswers: quizAttemptsTable.correctAnswers,
+      totalQuestions: quizAttemptsTable.totalQuestions,
+      percentCorrect: quizAttemptsTable.percentCorrect,
+      durationSeconds: quizAttemptsTable.durationSeconds,
+      completedAt: quizAttemptsTable.completedAt,
+    })
+    .from(quizAttemptsTable)
+    .innerJoin(quizzesTable, eq(quizAttemptsTable.quizId, quizzesTable.id))
+    .where(eq(quizAttemptsTable.clerkUserId, userId))
+    .orderBy(desc(quizAttemptsTable.completedAt), desc(quizAttemptsTable.id));
+
+  res.json(GetMyAttemptsResponse.parse(attempts));
+});
+
 router.get("/attempts/:attemptId", requireSignedIn, async (req, res): Promise<void> => {
   const params = GetAttemptParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const userId = getAuth(req).userId;
+  if (!userId) {
+    res.status(401).json({ error: "Sign in to view quiz results" });
     return;
   }
 
@@ -264,7 +297,12 @@ router.get("/attempts/:attemptId", requireSignedIn, async (req, res): Promise<vo
     })
     .from(quizAttemptsTable)
     .innerJoin(quizzesTable, eq(quizAttemptsTable.quizId, quizzesTable.id))
-    .where(eq(quizAttemptsTable.id, params.data.attemptId))
+    .where(
+      and(
+        eq(quizAttemptsTable.id, params.data.attemptId),
+        eq(quizAttemptsTable.clerkUserId, userId),
+      ),
+    )
     .limit(1);
 
   if (!attempt) {

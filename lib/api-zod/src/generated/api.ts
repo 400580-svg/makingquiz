@@ -112,6 +112,22 @@ export const SubmitAttemptResponse = zod.object({
 
 
 /**
+ * @summary Get the signed-in player's saved quiz scores
+ */
+export const GetMyAttemptsResponseItem = zod.object({
+  "attemptId": zod.number().int(),
+  "quizId": zod.number().int(),
+  "quizTitle": zod.string(),
+  "correctAnswers": zod.number().int(),
+  "totalQuestions": zod.number().int(),
+  "percentCorrect": zod.number().int(),
+  "durationSeconds": zod.number().int(),
+  "completedAt": zod.coerce.date()
+})
+export const GetMyAttemptsResponse = zod.array(GetMyAttemptsResponseItem)
+
+
+/**
  * @summary Get a saved quiz result
  */
 export const GetAttemptParams = zod.object({

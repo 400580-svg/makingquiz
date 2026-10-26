@@ -32,6 +32,7 @@ import type {
   GetLeaderboardParams,
   HealthStatus,
   LeaderboardEntry,
+  MyAttemptEntry,
   Quiz,
   QuizQuestion
 } from './api.schemas';
@@ -555,6 +556,107 @@ export const useSubmitAttempt = <TError = ErrorType<ApiError | void>,
       > => {
       return useMutation(getSubmitAttemptMutationOptions(options), queryClient);
     }
+
+export const getGetMyAttemptsUrl = () => {
+
+
+
+
+  return `/api/attempts/mine`
+}
+
+/**
+ * @summary Get the signed-in player's saved quiz scores
+ */
+export const getMyAttempts = async ( options?: Parameters<typeof customFetch>[1]): Promise<MyAttemptEntry[]> => {
+
+  return customFetch<MyAttemptEntry[]>(getGetMyAttemptsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyAttemptsQueryKey = () => {
+    return [
+    `/api/attempts/mine`
+    ] as const;
+    }
+
+
+export const getGetMyAttemptsQueryOptions = <TData = Awaited<ReturnType<typeof getMyAttempts>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyAttempts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyAttemptsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyAttempts>>> = ({ signal }) => getMyAttempts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyAttempts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMyAttemptsQueryResult = NonNullable<Awaited<ReturnType<typeof getMyAttempts>>>
+export type GetMyAttemptsQueryError = ErrorType<ApiError>
+
+
+export function useGetMyAttempts<TData = Awaited<ReturnType<typeof getMyAttempts>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyAttempts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyAttempts>>,
+          TError,
+          Awaited<ReturnType<typeof getMyAttempts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyAttempts<TData = Awaited<ReturnType<typeof getMyAttempts>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyAttempts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyAttempts>>,
+          TError,
+          Awaited<ReturnType<typeof getMyAttempts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyAttempts<TData = Awaited<ReturnType<typeof getMyAttempts>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyAttempts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get the signed-in player's saved quiz scores
+ */
+
+export function useGetMyAttempts<TData = Awaited<ReturnType<typeof getMyAttempts>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyAttempts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMyAttemptsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetAttemptUrl = (attemptId: number,) => {
 

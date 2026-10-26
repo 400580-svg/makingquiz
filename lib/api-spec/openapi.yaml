@@ -124,6 +124,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /attempts/mine:
+    get:
+      operationId: getMyAttempts
+      tags: [attempts]
+      summary: Get the signed-in player's saved quiz scores
+      responses:
+        "200":
+          description: Saved quiz score history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyAttemptEntry"
+        "401":
+          description: Sign in to view saved scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /attempts/{attemptId}:
     get:
       operationId: getAttempt
@@ -329,6 +349,35 @@ components:
         - durationSeconds
         - completedAt
         - answers
+    MyAttemptEntry:
+      type: object
+      properties:
+        attemptId:
+          type: integer
+        quizId:
+          type: integer
+        quizTitle:
+          type: string
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentCorrect:
+          type: integer
+        durationSeconds:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - attemptId
+        - quizId
+        - quizTitle
+        - correctAnswers
+        - totalQuestions
+        - percentCorrect
+        - durationSeconds
+        - completedAt
     LeaderboardEntry:
       type: object
       properties:
