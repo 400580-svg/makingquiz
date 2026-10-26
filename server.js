@@ -1,14 +1,27 @@
-// NFL Quiz Central — Phase 1: Foundation & Authentication (registration)
+// NFL Quiz Central — Phase 1: Foundation & Authentication
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const bcrypt = require('bcrypt');
+const session = require('express-session');
 const { initDb, query } = require('./db');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
 
 app.use(express.json());
-app.use(express.static('public'));
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'qa-only-dev-secret-change-me',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 2 * 60 * 60 * 1000 // 2 hours
+  }
+}));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- Admin cold-start bootstrap (production path) ----------
 async function bootstrapAdminAccount() {
@@ -28,6 +41,26 @@ async function bootstrapAdminAccount() {
     [username, email, hash]
   );
   console.log('[bootstrap] Admin account provisioned from env secrets.');
+}
+
+// ---------- Access-control middleware ----------
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ errors: ['You must be logged in to do that.'] });
+  }
+  next();
+}
+
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!req.session.user) {
+      return res.status(401).json({ errors: ['You must be logged in to do that.'] });
+    }
+    if (!roles.includes(req.session.user.role)) {
+      return res.status(403).json({ errors: ['You do not have permission to do that.'] });
+    }
+    next();
+  };
 }
 
 // ---------- Validation helpers ----------
@@ -99,6 +132,60 @@ app.post('/api/auth/register', async (req, res) => {
     }
     console.error('[register] unexpected error:', err.message);
     res.status(500).json({ errors: ['Registration failed. Please try again.'] });
+  }
+});
+
+// ---------- POST /api/auth/login ----------
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { identifier, password } = req.body || {};
+    if (!identifier || !password) {
+      return res.status(400).json({ errors: ['Enter your email/username and password.'] });
+    }
+    const result = await query(
+      'SELECT id, username, email, password_hash, role, verification_status FROM users WHERE email = $1 OR username = $1',
+      [identifier.trim().toLowerCase()]
+    );
+    const user = result.rows[0];
+    // Anti-enumeration: same generic error for unknown user and bad password.
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      return res.status(401).json({ errors: ['Invalid email/username or password.'] });
+    }
+    req.session.user = { id: user.id, username: user.username, role: user.role };
+    req.session.save(() => {
+      res.json({ username: user.username, role: user.role });
+    });
+  } catch (err) {
+    console.error('[login] unexpected error:', err.message);
+    res.status(500).json({ errors: ['Login failed. Please try again.'] });
+  }
+});
+
+// ---------- POST /api/auth/logout ----------
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid');
+    res.json({ message: 'Logged out.' });
+  });
+});
+
+// ---------- GET /api/auth/me ----------
+app.get('/api/auth/me', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ errors: ['Not logged in.'] });
+  const { id, username, role } = req.session.user;
+  res.json({ id, username, role });
+});
+
+// ---------- Admin-only endpoint (RBAC proof for Phase 1) ----------
+app.get('/api/admin/stats', requireRole('admin', 'teacher'), async (_req, res) => {
+  try {
+    const { rows } = await query(
+      "SELECT role, COUNT(*)::int AS count FROM users GROUP BY role ORDER BY role"
+    );
+    res.json({ users_by_role: rows });
+  } catch (err) {
+    console.error('[admin stats] error:', err.message);
+    res.status(500).json({ errors: ['Could not load stats.'] });
   }
 });
 
