@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log In — NFL Quiz Central</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <main class="auth-container">
+    <section class="auth-card">
+      <h1 class="auth-title">Back on the Field</h1>
+      <p class="auth-subtitle">Log in to your NFL Quiz Central account</p>
+
+      <form id="login-form" novalidate>
+        <div class="field">
+          <label for="identifier">Email or username</label>
+          <input type="text" id="identifier" name="identifier" autocomplete="username" required />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+
+        <div id="error-box" class="error-box" hidden></div>
+
+        <button type="submit" class="btn-primary">Log In</button>
+      </form>
+
+      <p class="auth-alt">New here? <a href="/register.html">Create an account</a></p>
+    </section>
+  </main>
+  <script src="/js/login.js"></script>
+</body>
+</html>
