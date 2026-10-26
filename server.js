@@ -233,6 +233,16 @@ app.get('/api/quizzes/:id', requireAuth, async (req, res) => {
     for (const o of options.rows) {
       (byQuestion[o.question_id] = byQuestion[o.question_id] || []).push({ id: o.id, text: o.option_text });
     }
+    // Shuffle each question's options so the correct answer position is
+    // unpredictable. Seed data inserts the correct option FIRST, so without
+    // this the first choice would always be the right answer.
+    for (const qid of Object.keys(byQuestion)) {
+      const arr = byQuestion[qid];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
     res.json({
       quiz: quiz.rows[0],
       questions: questions.rows.map(q => ({
