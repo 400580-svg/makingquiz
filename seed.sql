@@ -1,9 +1,13 @@
 -- QA-ONLY SEED. Never execute against production.
--- Throwaway credentials for the Replit QA workspace. Passwords are bcrypt hashes.
--- (QA test admin: admin-qa / QuizAdmin!2026)
+-- Throwaway credentials for the Replit QA workspace.
+-- The bcrypt hash is generated at seed time with pgcrypto (bcrypt-compatible,
+-- verified at login by the bcrypt npm library).
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- QA test admin: admin-qa@nflquizcentral.local / QuizAdmin!2026
 INSERT INTO users (username, email, password_hash, role, verification_status, verified_at)
 VALUES ('admin-qa', 'admin-qa@nflquizcentral.local',
-        '$2b$10$Kix8YxOA7B1f0kGyBBPP3uJQbTfYaECkaGqSBbT8rP9k3nVgSC.', 'admin', 'verified', NOW())
+        crypt('QuizAdmin!2026', gen_salt('bf', 10)), 'admin', 'verified', NOW())
 ON CONFLICT (email) DO NOTHING;
 
 -- QA educator key for testing teacher registration: TEACH-QA-2026
