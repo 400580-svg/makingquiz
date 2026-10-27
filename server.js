@@ -260,10 +260,19 @@ app.get('/api/quizzes/:id', requireAuth, async (req, res) => {
 // Submit answers: graded server-side. Unanswered or invalid selections count as incorrect.
 app.post('/api/quizzes/:id/submit', requireAuth, async (req, res) => {
   try {
+    const quiz = await query(
+      'SELECT id FROM quizzes WHERE id = $1 AND is_public = TRUE',
+      [req.params.id]
+    );
+    if (quiz.rows.length === 0) {
+      return res.status(404).json({ errors: ['Quiz not found.'] });
+    }
+
     const answers = (req.body && req.body.answers) || {};
     const questions = await query(
       `SELECT qs.id, qs.question_text, qs.is_active
-       FROM questions qs WHERE qs.quiz_id = $1`,
+       FROM questions qs
+       WHERE qs.quiz_id = $1 AND qs.is_active = TRUE`,
       [req.params.id]
     );
     if (questions.rows.length === 0) {
@@ -274,7 +283,7 @@ app.post('/api/quizzes/:id/submit', requireAuth, async (req, res) => {
       `SELECT o.id, o.question_id, o.option_text, o.is_correct
        FROM options o
        JOIN questions qs ON qs.id = o.question_id
-       WHERE qs.quiz_id = $1`,
+       WHERE qs.quiz_id = $1 AND qs.is_active = TRUE`,
       [req.params.id]
     );
     const optByQ = {};

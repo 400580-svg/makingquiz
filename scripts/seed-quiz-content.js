@@ -1,16 +1,46 @@
 // scripts/seed-quiz-content.js
 // QA seed for 5 playbooks x 10 questions (Phase 2 scope).
-// Idempotent: wipes existing quiz content and re-inserts it.
+// Idempotent: replaces only these known QA fixtures, not user-created quizzes.
 // The FIRST option in each question's array is the correct answer; the API
 // shuffles option order when serving, so position does not leak answers.
 require('dotenv').config();
 const { pool, query } = require('../db');
 
+const SEEDED_QUIZ_TITLES = [
+  'Football Basics: Points & Penalties',
+  'Jersey Numbers: Guess the Number',
+  'All-Time Stat Leaders',
+  'Franchises, Stadiums & Rivalries',
+  'NFL Draft & Franchise Legends',
+];
+
+function assertSeedAllowed() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to run the QA quiz seed in production.');
+  }
+  if (process.env.ALLOW_DESTRUCTIVE_QUIZ_SEED !== 'true') {
+    throw new Error(
+      'Set ALLOW_DESTRUCTIVE_QUIZ_SEED=true to replace the five QA fixture quizzes.'
+    );
+  }
+}
+
 async function seed() {
-  const client = await pool.connect();
+  let client;
+  let transactionStarted = false;
   try {
+    assertSeedAllowed();
+    client = await pool.connect();
     await client.query('BEGIN');
-    await client.query('DELETE FROM quizzes'); // cascades to questions + options
+    transactionStarted = true;
+    await client.query(
+      `DELETE FROM quizzes
+       WHERE creator_id = (
+         SELECT id FROM users WHERE role = 'admin' ORDER BY created_at LIMIT 1
+       )
+       AND title = ANY($1::text[])`,
+      [SEEDED_QUIZ_TITLES]
+    );
 
     // ---- Quiz 1: Football Basics: Points & Penalties ----
     const quiz0 = await client.query(
@@ -1203,15 +1233,18 @@ async function seed() {
     }
 
     await client.query('COMMIT');
+    transactionStarted = false;
     const { rows } = await client.query('SELECT COUNT(*)::int AS quizzes FROM quizzes');
     const q = await client.query('SELECT COUNT(*)::int AS questions FROM questions');
     console.log(`Seeded ${rows[0].quizzes} quizzes and ${q.rows[0].questions} questions.`);
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (client && transactionStarted) {
+      await client.query('ROLLBACK').catch(() => {});
+    }
     console.error('Seed failed:', err.message);
     process.exitCode = 1;
   } finally {
-    client.release();
+    client?.release();
     await pool.end();
   }
 }
