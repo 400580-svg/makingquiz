@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Results — NFL Quiz Central</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <nav class="top-nav">
+    <a class="brand" href="/dashboard.html">🏈 NFL Quiz Central</a>
+    <div class="nav-links">
+      <a class="nav-link" href="/playbooks.html">Playbooks</a>
+      <a class="nav-link" href="#" id="nav-logout">Log out</a>
+    </div>
+  </nav>
+  <main class="page">
+    <div class="score-hero">
+      <div class="score" id="score"></div>
+      <div class="pct" id="pct"></div>
+    </div>
+    <h1>Question Review</h1>
+    <div id="review"></div>
+    <div style="display:flex; gap:16px; max-width:320px; margin-top:24px">
+      <button id="retry-btn" class="btn-primary">Retry Quiz</button>
+    </div>
+  </main>
+  <script src="/js/results.js"></script>
+</body>
+</html>

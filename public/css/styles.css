@@ -85,3 +85,79 @@ body {
 
 .auth-alt { margin-top: 20px; text-align: center; color: var(--slate-gray); }
 .auth-alt a { color: var(--turf-green); font-weight: 600; }
+
+/* ---------- Quiz engine (Phase 2) ---------- */
+.top-nav {
+  display: flex; align-items: center; gap: 20px;
+  padding: 16px 32px;
+  background: var(--turf-green);
+}
+.top-nav .brand {
+  color: var(--championship-gold);
+  font-family: 'Montserrat', 'Chakra Petch', sans-serif;
+  font-weight: 700; font-size: 1.2rem; text-decoration: none;
+}
+.top-nav .nav-links { margin-left: auto; display: flex; gap: 16px; }
+.top-nav a.nav-link { color: var(--surface-white); text-decoration: none; font-weight: 500; }
+.top-nav a.nav-link:hover { color: var(--championship-gold); }
+
+.page { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+.page h1 {
+  font-family: 'Montserrat', 'Chakra Petch', sans-serif;
+  color: var(--turf-green); margin-bottom: 24px;
+}
+
+.quiz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.quiz-card {
+  background: var(--surface-white);
+  border: 2px solid rgba(27, 77, 62, 0.15);
+  border-radius: 12px; padding: 20px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.quiz-card .badge {
+  align-self: flex-start;
+  background: rgba(245, 176, 65, 0.15); color: var(--turf-green);
+  border-radius: 999px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600;
+}
+.quiz-card h2 { font-size: 1.05rem; }
+.quiz-card p { font-size: 0.85rem; color: var(--slate-gray); flex: 1; }
+.quiz-card .meta { font-size: 0.8rem; color: var(--slate-gray); }
+.quiz-card .btn-primary { margin-top: 8px; }
+
+.progress-bar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--stadium-cream);
+  padding: 12px 0; font-weight: 600; color: var(--turf-green);
+}
+.question-card {
+  background: var(--surface-white);
+  border: 2px solid rgba(27, 77, 62, 0.15);
+  border-radius: 12px; padding: 24px; margin-bottom: 20px;
+}
+.question-card h2 { font-size: 1.05rem; margin-bottom: 16px; }
+.choice {
+  display: flex; align-items: center; min-height: 48px;
+  border: 2px solid rgba(124, 117, 113, 0.35);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;
+  cursor: pointer; font-size: 0.95rem;
+}
+.choice:hover { border-color: var(--turf-green); }
+.choice.selected { border-color: var(--turf-green); background: rgba(27, 77, 62, 0.06); font-weight: 600; }
+
+.score-hero {
+  background: var(--surface-white);
+  border: 2px solid rgba(27, 77, 62, 0.15);
+  border-radius: 12px; padding: 32px; text-align: center; margin-bottom: 24px;
+}
+.score-hero .score {
+  font-family: 'Montserrat', 'Chakra Petch', sans-serif;
+  font-size: 3rem; font-weight: 700; color: var(--turf-green);
+}
+.score-hero .pct { font-size: 1.2rem; color: var(--championship-gold); font-weight: 700; }
+
+.review-item { border-left: 4px solid var(--penalty-red); padding: 12px 16px; background: var(--surface-white); margin-bottom: 10px; border-radius: 0 8px 8px 0; }
+.review-item.correct { border-left-color: var(--mint-green); }
+.review-item .status { font-weight: 700; font-size: 0.85rem; }
+.review-item.correct .status { color: var(--mint-green); }
+.review-item.wrong .status { color: var(--penalty-red); }
+.review-item .answer-note { font-size: 0.85rem; color: var(--slate-gray); margin-top: 4px; }

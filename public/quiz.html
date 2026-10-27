@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Play — NFL Quiz Central</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <nav class="top-nav">
+    <a class="brand" href="/dashboard.html">🏈 NFL Quiz Central</a>
+    <div class="nav-links">
+      <a class="nav-link" href="/playbooks.html">Playbooks</a>
+      <a class="nav-link" href="#" id="nav-logout">Log out</a>
+    </div>
+  </nav>
+  <main class="page">
+    <div class="progress-bar" id="progress">Loading…</div>
+    <h1 id="quiz-title"></h1>
+    <form id="quiz-form"></form>
+    <div id="error-box" class="error-box" hidden></div>
+    <button id="submit-btn" class="btn-primary" style="max-width:320px">Submit Answers</button>
+  </main>
+  <script src="/js/quiz.js"></script>
+</body>
+</html>
