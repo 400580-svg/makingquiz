@@ -1,0 +1,1 @@
+- [Artifact registry and branch switches](artifact-registry-branch-switch.md) — if switching branches removes registrations, restore the artifact-containing branch and restart its existing managed workflow before recreating anything.
