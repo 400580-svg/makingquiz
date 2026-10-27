@@ -7,7 +7,8 @@
   },
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed:quizzes": "node scripts/seed-quiz-content.js"
   },
   "dependencies": {
     "express": "^5.1.0",

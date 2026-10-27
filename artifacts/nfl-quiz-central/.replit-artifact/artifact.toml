@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "NFL Quiz Central"
+description = "An interactive NFL football trivia app where fans can play curated quizzes, learn as they go, and track their scores over time."
+version = "1.0.0"
+id = "artifacts/nfl-quiz-central"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23529
+
+[services.development]
+run = "pnpm --filter @workspace/nfl-quiz-central run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nfl-quiz-central", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nfl-quiz-central/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23529"
+BASE_PATH = "/"
