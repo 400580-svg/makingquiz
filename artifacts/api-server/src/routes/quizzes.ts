@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import {
   type QuizChoice,
   type ScoredQuizAnswer,
@@ -26,6 +27,15 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter, type RequestHandler } from "express";
 
 const router: IRouter = Router();
+
+function shuffleChoices(choices: QuizChoice[]): QuizChoice[] {
+  const shuffled = [...choices];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = randomInt(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
 
 const requireSignedIn: RequestHandler = (req, res, next) => {
   if (!getAuth(req).userId) {
@@ -136,7 +146,14 @@ router.get("/quizzes/:quizId/questions", requireSignedIn, async (req, res): Prom
     .where(eq(quizQuestionsTable.quizId, params.data.quizId))
     .orderBy(asc(quizQuestionsTable.position));
 
-  res.json(GetQuizQuestionsResponse.parse(questions));
+  res.json(
+    GetQuizQuestionsResponse.parse(
+      questions.map((question) => ({
+        ...question,
+        choices: shuffleChoices(question.choices),
+      })),
+    ),
+  );
 });
 
 router.post("/attempts", async (req, res): Promise<void> => {
