@@ -161,3 +161,86 @@ body {
 .review-item.correct .status { color: var(--mint-green); }
 .review-item.wrong .status { color: var(--penalty-red); }
 .review-item .answer-note { font-size: 0.85rem; color: var(--slate-gray); margin-top: 4px; }
+
+/* ---------- Leaderboards (Phase 4) ---------- */
+.lb-section { margin-bottom: 40px; }
+.lb-table { width: 100%; border-collapse: collapse; background: var(--surface-white); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(24,26,27,0.06); }
+.lb-table th {
+  background: var(--turf-green); color: var(--surface-white);
+  text-align: left; padding: 12px 16px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.lb-table td { padding: 14px 16px; border-bottom: 1px solid rgba(124,117,113,0.15); vertical-align: middle; }
+.lb-table tr:last-child td { border-bottom: none; }
+.lb-table tr.me-row { background: rgba(245, 176, 65, 0.10); }
+.rank-cell { width: 90px; white-space: nowrap; }
+.rank-num {
+  display: inline-block; min-width: 34px; text-align: center;
+  font-family: 'Montserrat', sans-serif; font-weight: 700; color: var(--slate-gray);
+}
+.username-cell { font-weight: 600; }
+
+/* Rank badge base */
+.rank-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em; position: relative; overflow: hidden; }
+.rank-badge svg { flex-shrink: 0; }
+
+/* #1: Super Bowl Champion — gold trophy, animated shine + glow */
+.rank-badge.champ {
+  background: linear-gradient(135deg, #F5B041 0%, #E09B2D 50%, #F5B041 100%);
+  color: #181A1B;
+  box-shadow: 0 0 0 2px rgba(245,176,65,0.35), 0 0 18px rgba(245,176,65,0.55);
+  animation: champ-glow 2.2s ease-in-out infinite;
+}
+@keyframes champ-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(245,176,65,0.35), 0 0 12px rgba(245,176,65,0.45); }
+  50% { box-shadow: 0 0 0 3px rgba(245,176,65,0.55), 0 0 26px rgba(245,176,65,0.85); }
+}
+.rank-badge.champ::after {
+  content: ''; position: absolute; top: -50%; bottom: -50%; width: 40%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.75), transparent);
+  transform: skewX(-20deg);
+  animation: shine-sweep 2.6s linear infinite;
+}
+@keyframes shine-sweep {
+  0% { left: -50%; }
+  60%, 100% { left: 130%; }
+}
+.rank-badge .trophy { animation: trophy-bounce 2.2s ease-in-out infinite; transform-origin: bottom center; }
+@keyframes trophy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.08); }
+}
+
+/* #2: AFC Championship — red & silver, gentle pulse */
+.rank-badge.afc {
+  background: linear-gradient(135deg, #C8102E 0%, #9B0C22 100%);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(200,16,46,0.30);
+  animation: afc-pulse 2.8s ease-in-out infinite;
+}
+@keyframes afc-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(200,16,46,0.30); }
+  50% { box-shadow: 0 0 0 2px rgba(200,16,46,0.55), 0 0 14px rgba(200,16,46,0.45); }
+}
+
+/* #3: NFC Championship — blue & silver, gentle pulse */
+.rank-badge.nfc {
+  background: linear-gradient(135deg, #013369 0%, #0A2C52 100%);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(1,51,105,0.30);
+  animation: nfc-pulse 2.8s ease-in-out infinite;
+}
+@keyframes nfc-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(1,51,105,0.30); }
+  50% { box-shadow: 0 0 0 2px rgba(1,51,105,0.55), 0 0 14px rgba(1,51,105,0.45); }
+}
+
+.quiz-select { margin-bottom: 16px; min-height: 48px; padding: 10px 14px; border-radius: 8px; border: 2px solid rgba(124,117,113,0.35); font-size: 1rem; background: var(--surface-white); max-width: 420px; }
+
+
+/* ---------- Leaderboard football background (Phase 4) ---------- */
+body.lb-page {
+  background-color: var(--stadium-cream);
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2040%2040%27%3E%3Cg%20transform%3D%27rotate(-25%2020%2020)%27%3E%3Cellipse%20cx%3D%2720%27%20cy%3D%2720%27%20rx%3D%2712%27%20ry%3D%277.5%27%20fill%3D%27%237A4A2B%27%20fill-opacity%3D%270.10%27%2F%3E%3Cpath%20d%3D%27M20%2014v12M17.2%2016.2v7.6M22.8%2016.2v7.6%27%20stroke%3D%27%237A4A2B%27%20stroke-opacity%3D%270.10%27%20stroke-width%3D%271.4%27%2F%3E%3Cpath%20d%3D%27M11%2020h3.4M25.6%2020H29%27%20stroke%3D%27%237A4A2B%27%20stroke-opacity%3D%270.10%27%20stroke-width%3D%271.4%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  background-size: 96px 96px;
+  background-repeat: repeat;
+}

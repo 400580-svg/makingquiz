@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
 import { quizQuestionsTable, quizzesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { githubQuizCatalog } from "./github-quiz-catalog";
 
 const catalog = [
   {
@@ -201,6 +202,7 @@ const catalog = [
       },
     ],
   },
+  ...githubQuizCatalog,
 ];
 
 export async function seedQuizCatalog(): Promise<void> {
