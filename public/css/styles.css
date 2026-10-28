@@ -235,3 +235,12 @@ body {
 }
 
 .quiz-select { margin-bottom: 16px; min-height: 48px; padding: 10px 14px; border-radius: 8px; border: 2px solid rgba(124,117,113,0.35); font-size: 1rem; background: var(--surface-white); max-width: 420px; }
+
+
+/* ---------- Leaderboard football background (Phase 4) ---------- */
+body.lb-page {
+  background-color: var(--stadium-cream);
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2040%2040%27%3E%3Cg%20transform%3D%27rotate(-25%2020%2020)%27%3E%3Cellipse%20cx%3D%2720%27%20cy%3D%2720%27%20rx%3D%2712%27%20ry%3D%277.5%27%20fill%3D%27%237A4A2B%27%20fill-opacity%3D%270.10%27%2F%3E%3Cpath%20d%3D%27M20%2014v12M17.2%2016.2v7.6M22.8%2016.2v7.6%27%20stroke%3D%27%237A4A2B%27%20stroke-opacity%3D%270.10%27%20stroke-width%3D%271.4%27%2F%3E%3Cpath%20d%3D%27M11%2020h3.4M25.6%2020H29%27%20stroke%3D%27%237A4A2B%27%20stroke-opacity%3D%270.10%27%20stroke-width%3D%271.4%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  background-size: 96px 96px;
+  background-repeat: repeat;
+}
