@@ -1,0 +1,432 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: quizzes
+    description: NFL trivia quizzes
+  - name: attempts
+    description: Quiz submissions and leaderboards
+  - name: dashboard
+    description: Quiz activity summaries
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /quizzes:
+    get:
+      operationId: listQuizzes
+      tags: [quizzes]
+      summary: List available quizzes
+      responses:
+        "200":
+          description: Available quizzes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Quiz"
+  /quizzes/{quizId}:
+    get:
+      operationId: getQuiz
+      tags: [quizzes]
+      summary: Get quiz details
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+        "404":
+          description: Quiz not found
+        "401":
+          description: Sign in to access quiz questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /quizzes/{quizId}/questions:
+    get:
+      operationId: getQuizQuestions
+      tags: [quizzes]
+      summary: Get playable quiz questions without answer keys
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Questions and answer choices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizQuestion"
+        "404":
+          description: Quiz not found
+  /attempts:
+    post:
+      operationId: submitAttempt
+      tags: [attempts]
+      summary: Score and save a completed quiz attempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptInput"
+      responses:
+        "201":
+          description: Scored attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "400":
+          description: Invalid attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Quiz or question not found
+        "401":
+          description: Sign in before submitting a score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /attempts/mine:
+    get:
+      operationId: getMyAttempts
+      tags: [attempts]
+      summary: Get the signed-in player's saved quiz scores
+      responses:
+        "200":
+          description: Saved quiz score history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MyAttemptEntry"
+        "401":
+          description: Sign in to view saved scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /attempts/{attemptId}:
+    get:
+      operationId: getAttempt
+      tags: [attempts]
+      summary: Get a saved quiz result
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Saved attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "404":
+          description: Attempt not found
+        "401":
+          description: Sign in to view quiz results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [attempts]
+      summary: Get the top recent quiz scores
+      parameters:
+        - name: quizId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get quiz activity and performance totals
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Quiz:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        difficulty:
+          type: string
+          enum: [Rookie, Pro, Hall of Fame]
+        questionCount:
+          type: integer
+        estimatedMinutes:
+          type: integer
+        featured:
+          type: boolean
+      required:
+        - id
+        - title
+        - category
+        - description
+        - difficulty
+        - questionCount
+        - estimatedMinutes
+        - featured
+    QuizChoice:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+      required: [id, label]
+    QuizQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        position:
+          type: integer
+        prompt:
+          type: string
+        choices:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizChoice"
+      required: [id, position, prompt, choices]
+    AttemptAnswerInput:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedChoiceId:
+          type: string
+      required: [questionId, selectedChoiceId]
+    AttemptInput:
+      type: object
+      properties:
+        quizId:
+          type: integer
+        displayName:
+          type: string
+          maxLength: 24
+        durationSeconds:
+          type: integer
+          minimum: 0
+          maximum: 3600
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttemptAnswerInput"
+      required: [quizId, displayName, durationSeconds, answers]
+    ScoredAnswer:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        selectedChoiceId:
+          type: string
+        correctChoiceId:
+          type: string
+        isCorrect:
+          type: boolean
+        explanation:
+          type: string
+      required:
+        - questionId
+        - selectedChoiceId
+        - correctChoiceId
+        - isCorrect
+        - explanation
+    AttemptResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        quizId:
+          type: integer
+        quizTitle:
+          type: string
+        displayName:
+          type: string
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentCorrect:
+          type: integer
+        durationSeconds:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoredAnswer"
+      required:
+        - id
+        - quizId
+        - quizTitle
+        - displayName
+        - correctAnswers
+        - totalQuestions
+        - percentCorrect
+        - durationSeconds
+        - completedAt
+        - answers
+    MyAttemptEntry:
+      type: object
+      properties:
+        attemptId:
+          type: integer
+        quizId:
+          type: integer
+        quizTitle:
+          type: string
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentCorrect:
+          type: integer
+        durationSeconds:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - attemptId
+        - quizId
+        - quizTitle
+        - correctAnswers
+        - totalQuestions
+        - percentCorrect
+        - durationSeconds
+        - completedAt
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        attemptId:
+          type: integer
+        displayName:
+          type: string
+        quizTitle:
+          type: string
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        percentCorrect:
+          type: integer
+        durationSeconds:
+          type: integer
+        completedAt:
+          type: string
+          format: date-time
+      required:
+        - rank
+        - attemptId
+        - displayName
+        - quizTitle
+        - correctAnswers
+        - totalQuestions
+        - percentCorrect
+        - durationSeconds
+        - completedAt
+    DashboardSummary:
+      type: object
+      properties:
+        quizzesAvailable:
+          type: integer
+        totalQuestions:
+          type: integer
+        gamesPlayed:
+          type: integer
+        averageScore:
+          type: integer
+        topScore:
+          type: integer
+      required:
+        - quizzesAvailable
+        - totalQuestions
+        - gamesPlayed
+        - averageScore
+        - topScore
+
