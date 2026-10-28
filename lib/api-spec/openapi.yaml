@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Teacher signup access
   - name: quizzes
     description: NFL trivia quizzes
   - name: attempts
@@ -30,6 +32,96 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /teacher-signup/verify:
+    post:
+      operationId: verifyTeacherSignupCode
+      tags: [auth]
+      summary: Verify the private teacher signup code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeacherSignupCodeInput"
+      responses:
+        "200":
+          description: Code accepted; a short-lived HttpOnly proof cookie is set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherSignupCodeVerified"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Code not accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Too many code attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Teacher signup is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /teacher-signup/claim:
+    post:
+      operationId: claimTeacherSignup
+      tags: [auth]
+      summary: Mark the signed-in user as a teacher
+      responses:
+        "200":
+          description: Teacher role assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherSignupClaimResponse"
+        "401":
+          description: Sign in to complete teacher signup
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Teacher signup proof is missing or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Account already has a different role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Teacher signup is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /teacher-signup/cancel:
+    post:
+      operationId: cancelTeacherSignup
+      tags: [auth]
+      summary: Clear an unused teacher signup proof
+      responses:
+        "200":
+          description: Proof cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherSignupClaimResponse"
   /quizzes:
     get:
       operationId: listQuizzes
@@ -217,6 +309,26 @@ components:
         error:
           type: string
       required: [error]
+    TeacherSignupCodeInput:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 512
+      required: [code]
+    TeacherSignupCodeVerified:
+      type: object
+      properties:
+        verified:
+          type: boolean
+      required: [verified]
+    TeacherSignupClaimResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
     Quiz:
       type: object
       properties:

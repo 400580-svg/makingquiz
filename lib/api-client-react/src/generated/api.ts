@@ -34,7 +34,10 @@ import type {
   LeaderboardEntry,
   MyAttemptEntry,
   Quiz,
-  QuizQuestion
+  QuizQuestion,
+  TeacherSignupClaimResponse,
+  TeacherSignupCodeInput,
+  TeacherSignupCodeVerified
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -165,6 +168,242 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getVerifyTeacherSignupCodeUrl = () => {
+
+
+
+
+  return `/api/teacher-signup/verify`
+}
+
+/**
+ * @summary Verify the private teacher signup code
+ */
+export const verifyTeacherSignupCode = async (teacherSignupCodeInput: TeacherSignupCodeInput, options?: Parameters<typeof customFetch>[1]): Promise<TeacherSignupCodeVerified> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TeacherSignupCodeVerified>(getVerifyTeacherSignupCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(teacherSignupCodeInput)
+  }
+);}
+
+
+
+
+
+export const getVerifyTeacherSignupCodeMutationKey = () => ['verifyTeacherSignupCode'] as const;
+
+export const getVerifyTeacherSignupCodeMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyTeacherSignupCode>>, TError,VerifyTeacherSignupCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyTeacherSignupCode>>, TError,VerifyTeacherSignupCodeMutationVariables, TContext> => {
+
+const mutationKey = getVerifyTeacherSignupCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyTeacherSignupCode>>, VerifyTeacherSignupCodeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyTeacherSignupCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyTeacherSignupCodeMutationResult = NonNullable<Awaited<ReturnType<typeof verifyTeacherSignupCode>>>
+    export type VerifyTeacherSignupCodeMutationBody = BodyType<TeacherSignupCodeInput>
+    export type VerifyTeacherSignupCodeMutationError = ErrorType<ApiError>
+    export type VerifyTeacherSignupCodeMutationVariables = {data: BodyType<TeacherSignupCodeInput>}
+
+    /**
+ * @summary Verify the private teacher signup code
+ */
+export const useVerifyTeacherSignupCode = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyTeacherSignupCode>>, TError,VerifyTeacherSignupCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof verifyTeacherSignupCode>>,
+        TError,
+        VerifyTeacherSignupCodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifyTeacherSignupCodeMutationOptions(options), queryClient);
+    }
+
+export const getClaimTeacherSignupUrl = () => {
+
+
+
+
+  return `/api/teacher-signup/claim`
+}
+
+/**
+ * @summary Mark the signed-in user as a teacher
+ */
+export const claimTeacherSignup = async ( options?: Parameters<typeof customFetch>[1]): Promise<TeacherSignupClaimResponse> => {
+
+  return customFetch<TeacherSignupClaimResponse>(getClaimTeacherSignupUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getClaimTeacherSignupMutationKey = () => ['claimTeacherSignup'] as const;
+
+export const getClaimTeacherSignupMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTeacherSignup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimTeacherSignup>>, TError,void, TContext> => {
+
+const mutationKey = getClaimTeacherSignupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimTeacherSignup>>, void> = () => {
+
+
+          return  claimTeacherSignup(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimTeacherSignupMutationResult = NonNullable<Awaited<ReturnType<typeof claimTeacherSignup>>>
+
+    export type ClaimTeacherSignupMutationError = ErrorType<ApiError>
+
+
+    /**
+ * @summary Mark the signed-in user as a teacher
+ */
+export const useClaimTeacherSignup = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimTeacherSignup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof claimTeacherSignup>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getClaimTeacherSignupMutationOptions(options), queryClient);
+    }
+
+export const getCancelTeacherSignupUrl = () => {
+
+
+
+
+  return `/api/teacher-signup/cancel`
+}
+
+/**
+ * @summary Clear an unused teacher signup proof
+ */
+export const cancelTeacherSignup = async ( options?: Parameters<typeof customFetch>[1]): Promise<TeacherSignupClaimResponse> => {
+
+  return customFetch<TeacherSignupClaimResponse>(getCancelTeacherSignupUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelTeacherSignupMutationKey = () => ['cancelTeacherSignup'] as const;
+
+export const getCancelTeacherSignupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelTeacherSignup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelTeacherSignup>>, TError,void, TContext> => {
+
+const mutationKey = getCancelTeacherSignupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelTeacherSignup>>, void> = () => {
+
+
+          return  cancelTeacherSignup(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelTeacherSignupMutationResult = NonNullable<Awaited<ReturnType<typeof cancelTeacherSignup>>>
+
+    export type CancelTeacherSignupMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Clear an unused teacher signup proof
+ */
+export const useCancelTeacherSignup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelTeacherSignup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cancelTeacherSignup>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelTeacherSignupMutationOptions(options), queryClient);
+    }
 
 export const getListQuizzesUrl = () => {
 

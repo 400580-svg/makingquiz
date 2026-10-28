@@ -13,6 +13,22 @@ export interface ApiError {
   error: string;
 }
 
+export interface TeacherSignupCodeInput {
+  /**
+     * @minLength 1
+     * @maxLength 512
+     */
+  code: string;
+}
+
+export interface TeacherSignupCodeVerified {
+  verified: boolean;
+}
+
+export interface TeacherSignupClaimResponse {
+  success: boolean;
+}
+
 export type QuizDifficulty = typeof QuizDifficulty[keyof typeof QuizDifficulty];
 
 

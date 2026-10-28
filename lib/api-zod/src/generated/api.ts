@@ -18,6 +18,38 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Verify the private teacher signup code
+ */
+export const verifyTeacherSignupCodeBodyCodeMax = 512;
+
+
+
+export const VerifyTeacherSignupCodeBody = zod.object({
+  "code": zod.string().min(1).max(verifyTeacherSignupCodeBodyCodeMax)
+})
+
+export const VerifyTeacherSignupCodeResponse = zod.object({
+  "verified": zod.boolean()
+})
+
+
+/**
+ * @summary Mark the signed-in user as a teacher
+ */
+export const ClaimTeacherSignupResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Clear an unused teacher signup proof
+ */
+export const CancelTeacherSignupResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary List available quizzes
  */
 export const ListQuizzesResponseItem = zod.object({

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, FormEvent, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ClerkProvider, SignIn, SignUp, useAuth, useClerk, useSignUp, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
@@ -10,9 +10,10 @@ import {
   Flag, Medal, RefreshCw, ShieldAlert, Sparkles, Trophy, Users, Zap,
 } from 'lucide-react';
 import {
-  getGetAttemptQueryKey, getGetDashboardSummaryQueryKey, getGetLeaderboardQueryKey, getGetMyAttemptsQueryKey, getGetQuizQueryKey, getGetQuizQuestionsQueryKey,
+  cancelTeacherSignup, claimTeacherSignup, getGetAttemptQueryKey, getGetDashboardSummaryQueryKey, getGetLeaderboardQueryKey, getGetMyAttemptsQueryKey, getGetQuizQueryKey, getGetQuizQuestionsQueryKey,
   useGetAttempt, useGetDashboardSummary, useGetLeaderboard, useGetMyAttempts,
   useGetQuiz, useGetQuizQuestions, useHealthCheck, useListQuizzes, useSubmitAttempt,
+  verifyTeacherSignupCode,
 } from '@workspace/api-client-react';
 import type { Quiz } from '@workspace/api-client-react';
 import { trackEvent } from '@/lib/analytics';
@@ -363,14 +364,63 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
   const { signUp } = useSignUp();
   const signupPendingObserved = useRef(false);
   const signupEventTracked = useRef(false);
+  const [teacherMode, setTeacherMode] = useState(false);
+  const [teacherCode, setTeacherCode] = useState('');
+  const [teacherCodeVerified, setTeacherCodeVerified] = useState(false);
+  const [teacherCodePending, setTeacherCodePending] = useState(false);
+  const [teacherCodeError, setTeacherCodeError] = useState('');
   const returnPathFromQuery = new URLSearchParams(window.location.search).get('redirect_url');
   const returnPath = returnPathFromQuery?.startsWith('/') && !returnPathFromQuery.startsWith('//')
     ? returnPathFromQuery
     : '/';
   const fullReturnPath = `${basePath}${returnPath}`;
+  const teacherCompleteUrl = `${basePath}/teacher-signup/complete?redirect_url=${encodeURIComponent(returnPath)}`;
   const signInUrl = `${basePath}/sign-in?redirect_url=${encodeURIComponent(returnPath)}`;
   const signUpUrl = `${basePath}/sign-up?redirect_url=${encodeURIComponent(returnPath)}`;
   const isSignUp = mode === 'sign-up';
+
+  const handleTeacherCodeSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setTeacherCodePending(true);
+    setTeacherCodeError('');
+    try {
+      const result = await verifyTeacherSignupCode({ code: teacherCode });
+      if (!result.verified) {
+        setTeacherCodeError('That code was not accepted. Check with the site admin.');
+        return;
+      }
+      setTeacherCode('');
+      setTeacherCodeVerified(true);
+    } catch (error) {
+      const status = typeof error === 'object' && error !== null && 'status' in error
+        ? (error as { status?: number }).status
+        : undefined;
+      setTeacherCodeError(
+        status === 429
+          ? 'Too many attempts. Wait a while before trying again.'
+          : status === 503
+            ? 'Teacher signup is unavailable right now. Contact the site admin.'
+            : status === 403
+              ? 'That code was not accepted. Check with the site admin.'
+              : 'Could not verify the code. Check your connection and try again.',
+      );
+    } finally {
+      setTeacherCodePending(false);
+    }
+  };
+
+  const returnToRegularSignup = async () => {
+    setTeacherCodeError('');
+    try {
+      await cancelTeacherSignup();
+      setTeacherMode(false);
+      setTeacherCode('');
+      setTeacherCodeVerified(false);
+    } catch {
+      setTeacherCodeError('Could not clear teacher signup. Please try again.');
+    }
+  };
+
   useEffect(() => {
     if (!isSignUp || !signUp) return;
 
@@ -391,13 +441,59 @@ function AuthPage({ mode }: { mode: 'sign-in' | 'sign-up' }) {
       <span className="auth-brand-copy">Zaiden's Quiz Site<small>THE FAN KNOWLEDGE LEAGUE</small></span>
     </Link>
     <section className="auth-intro">
-      <span className="eyebrow">{isSignUp ? 'Your Sunday starts here' : 'Back in the clubhouse'}</span>
-      <h1>{isSignUp ? 'Join the league.' : 'Welcome back.'}</h1>
-      <p>{isSignUp ? 'Create an account to play quizzes and save your scores.' : 'Sign in to pick up where you left off.'}</p>
+      <span className="eyebrow">{isSignUp ? (teacherMode ? 'Teacher registration' : 'Your Sunday starts here') : 'Back in the clubhouse'}</span>
+      <h1>{isSignUp ? (teacherMode ? 'Teacher access.' : 'Join the league.') : 'Welcome back.'}</h1>
+      <p>{isSignUp ? (teacherMode ? 'Enter the private code from the site admin to continue.' : 'Create an account to play quizzes and save your scores.') : 'Sign in to pick up where you left off.'}</p>
     </section>
     <div className="auth-card-wrap">
-      {isSignUp
-        ? <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={signInUrl} forceRedirectUrl={fullReturnPath} />
+      {isSignUp ? teacherMode ? teacherCodeVerified
+        ? <>
+            <div className="teacher-code-success" role="status">Code accepted. Finish creating your teacher account.</div>
+            <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={signInUrl} forceRedirectUrl={teacherCompleteUrl} />
+            <button type="button" className="teacher-text-button" onClick={() => void returnToRegularSignup()}>Cancel teacher signup</button>
+          </>
+        : <section className="teacher-code-card">
+            <form className="teacher-code-form" onSubmit={handleTeacherCodeSubmit}>
+              <label htmlFor="teacher-signup-code">Teacher access code</label>
+              <input
+                id="teacher-signup-code"
+                type="password"
+                value={teacherCode}
+                onChange={(event) => setTeacherCode(event.target.value)}
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={512}
+                required
+                disabled={teacherCodePending}
+                aria-describedby={teacherCodeError ? 'teacher-code-error' : 'teacher-code-help'}
+                data-testid="input-teacher-signup-code"
+              />
+              <p id="teacher-code-help">Only the site admin can provide this code.</p>
+              {teacherCodeError && <p id="teacher-code-error" className="error-note" role="alert" data-testid="status-teacher-code-error">{teacherCodeError}</p>}
+              <button type="submit" className="btn teacher-code-submit" disabled={teacherCodePending} data-testid="button-verify-teacher-code">
+                {teacherCodePending ? 'Checking code…' : 'Continue'}
+              </button>
+            </form>
+            <button type="button" className="teacher-text-button" onClick={() => void returnToRegularSignup()}>Back to regular signup</button>
+          </section>
+      : <>
+          <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={signInUrl} forceRedirectUrl={fullReturnPath} />
+          <div className="teacher-signup-option">
+            <span>Are you a teacher?</span>
+            <button
+              type="button"
+              className="teacher-text-button"
+              onClick={() => {
+                setTeacherCodeError('');
+                setTeacherMode(true);
+              }}
+              data-testid="button-teacher-signup"
+            >
+              Use your admin access code
+            </button>
+          </div>
+        </>
         : <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={signUpUrl} forceRedirectUrl={fullReturnPath} />}
     </div>
     <p className="auth-return"><Link href="/">← Back to quiz lineup</Link></p>
@@ -410,6 +506,58 @@ function SignUpPage() {
 
 function SignInPage() {
   return <AuthPage mode="sign-in" />;
+}
+
+function TeacherSignupComplete() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const [, setLocation] = useLocation();
+  const [status, setStatus] = useState<'working' | 'complete' | 'error'>('working');
+  const claimStarted = useRef(false);
+  const returnPathFromQuery = new URLSearchParams(window.location.search).get('redirect_url');
+  const returnPath = returnPathFromQuery?.startsWith('/') && !returnPathFromQuery.startsWith('//')
+    ? returnPathFromQuery
+    : '/';
+
+  useEffect(() => {
+    if (!isLoaded || claimStarted.current) return;
+    claimStarted.current = true;
+    if (!isSignedIn) {
+      setStatus('error');
+      return;
+    }
+
+    let redirectTimer: number | undefined;
+    void claimTeacherSignup()
+      .then(() => {
+        setStatus('complete');
+        redirectTimer = window.setTimeout(() => setLocation(returnPath), 900);
+      })
+      .catch(() => setStatus('error'));
+
+    return () => {
+      if (redirectTimer !== undefined) window.clearTimeout(redirectTimer);
+    };
+  }, [isLoaded, isSignedIn, returnPath, setLocation]);
+
+  return <main className="auth-page">
+    <Link href="/" className="auth-brand" data-testid="link-teacher-complete-home">
+      <span className="auth-brand-mark"><Flag size={21} strokeWidth={2.8} /></span>
+      <span className="auth-brand-copy">Zaiden's Quiz Site<small>THE FAN KNOWLEDGE LEAGUE</small></span>
+    </Link>
+    <section className="auth-intro">
+      <span className="eyebrow">Teacher registration</span>
+      <h1>{status === 'complete' ? 'You’re in.' : status === 'error' ? 'Setup incomplete.' : 'Finishing setup.'}</h1>
+      <p role="status">
+        {status === 'complete'
+          ? 'Teacher access is ready. Taking you to the quiz lineup.'
+          : status === 'error'
+            ? 'We could not confirm teacher access for this account.'
+            : 'Confirming your teacher signup…'}
+      </p>
+      {status === 'error' && <p className="error-note" role="alert">Your account may exist, but teacher access was not added. Sign in and ask the site admin for help.</p>}
+    </section>
+    {status === 'error' && <p className="auth-return"><Link href="/sign-in">Sign in</Link> · <Link href="/">Back to quizzes</Link></p>}
+  </main>;
 }
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -469,6 +617,7 @@ function Router() {
   return <Switch>
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/sign-up/*?" component={SignUpPage} />
+    <Route path="/teacher-signup/complete" component={TeacherSignupComplete} />
     <Route path="/" component={HomeRoute} />
     <Route path="/play/:quizId" component={PlayRoute} />
     <Route path="/results/:attemptId" component={ResultsRoute} />

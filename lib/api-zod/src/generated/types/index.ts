@@ -20,3 +20,6 @@ export * from './quizChoice';
 export * from './quizDifficulty';
 export * from './quizQuestion';
 export * from './scoredAnswer';
+export * from './teacherSignupClaimResponse';
+export * from './teacherSignupCodeInput';
+export * from './teacherSignupCodeVerified';
