@@ -1,4 +1,4 @@
-// NFL Quiz Central — Phase 1 (auth) + Phase 2 (quiz engine)
+// NFL Quiz Central — Phase 1 (auth) + Phase 2 (quiz engine) + Phase 3 (attempts & history)
 require('dotenv').config();
 const path = require('path');
 const express = require('express');
@@ -258,6 +258,7 @@ app.get('/api/quizzes/:id', requireAuth, async (req, res) => {
 });
 
 // Submit answers: graded server-side. Unanswered or invalid selections count as incorrect.
+// Phase 3: every completed (submitted) attempt is saved to quiz_attempts.
 app.post('/api/quizzes/:id/submit', requireAuth, async (req, res) => {
   try {
     const quiz = await query(
@@ -311,15 +312,56 @@ app.post('/api/quizzes/:id/submit', requireAuth, async (req, res) => {
     }
 
     const percentage = Math.round((score / total) * 1000) / 10;
+
+    // Phase 3: save this COMPLETED attempt (user, quiz, score, count, time).
+    // Unfinished attempts (page closed, never submitted) never reach this
+    // code, so they never count as completions.
+    const attempt = await query(
+      `INSERT INTO quiz_attempts (user_id, quiz_id, score, total_questions, status, completed_at)
+       VALUES ($1, $2, $3, $4, 'completed', NOW())
+       RETURNING id`,
+      [req.session.user.id, req.params.id, score, total]
+    );
+
     res.json({
       score,
       total_questions: total,
       percentage,
+      attempt_id: attempt.rows[0].id,
       details
     });
   } catch (err) {
     console.error('[submit] error:', err.message);
     res.status(500).json({ errors: ['Could not grade this attempt.'] });
+  }
+});
+
+// ===================== HISTORY ROUTES (Phase 3) =====================
+
+// Personal attempt history: ONLY the logged-in player's completed attempts.
+app.get('/api/history', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT qa.id, qa.score, qa.total_questions, qa.status, qa.completed_at,
+              q.title AS quiz_title, q.category AS quiz_category
+       FROM quiz_attempts qa
+       JOIN quizzes q ON q.id = qa.quiz_id
+       WHERE qa.user_id = $1 AND qa.status = 'completed'
+       ORDER BY qa.completed_at DESC`,
+      [req.session.user.id]
+    );
+    res.json({ attempts: rows.map(r => ({
+      id: r.id,
+      quiz_title: r.quiz_title,
+      quiz_category: r.quiz_category,
+      score: r.score,
+      total_questions: r.total_questions,
+      percentage: r.total_questions ? Math.round((r.score / r.total_questions) * 1000) / 10 : 0,
+      completed_at: r.completed_at
+    })) });
+  } catch (err) {
+    console.error('[history] error:', err.message);
+    res.status(500).json({ errors: ['Could not load your history.'] });
   }
 });
 
