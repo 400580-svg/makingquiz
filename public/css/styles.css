@@ -244,3 +244,30 @@ body.lb-page {
   background-size: 96px 96px;
   background-repeat: repeat;
 }
+
+
+/* ---------- Question Tools (Phase 4) ---------- */
+.btn-inline {
+  min-height: 48px; padding: 10px 22px; width: auto;
+  background: var(--turf-green); color: var(--surface-white);
+  border: 2px solid var(--turf-green); border-radius: 8px;
+  font-size: 1rem; font-weight: 600; cursor: pointer;
+}
+.btn-inline:hover { background: #14523f; }
+.btn-inline:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.csv-format-hint {
+  font-size: 0.85rem; color: var(--slate-gray); margin-bottom: 16px; line-height: 1.6;
+}
+.csv-format-hint code {
+  background: rgba(27,77,62,0.08); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;
+}
+.text-link { color: var(--turf-green); font-weight: 600; }
+
+.preview-table .status-cell { white-space: normal; min-width: 160px; font-size: 0.8rem; }
+.preview-table .choices-cell { font-size: 0.85rem; color: var(--slate-gray); }
+tr.row-bad { background: rgba(231, 76, 60, 0.08); }
+.ok-text { color: var(--mint-green); font-weight: 700; }
+.bad-text { color: var(--penalty-red); font-weight: 700; }
+.table-scroll { overflow-x: auto; }
+#csv-file { margin: 8px 0 16px; }

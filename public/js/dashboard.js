@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('welcome-username').textContent = user.username;
     document.getElementById('welcome-role').textContent = user.role;
 
+    // Only teachers/admins get the Question Tools button.
+    if (user.role === 'teacher' || user.role === 'admin') {
+      document.getElementById('teacher-tools-link').style.display = 'block';
+    }
+
     // RBAC demonstration: only teacher/admin can read stats.
     const statsRes = await fetch('/api/admin/stats');
     if (statsRes.ok) {

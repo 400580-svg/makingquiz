@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
-const { initDb, query } = require('./db');
+const { initDb, query, pool } = require('./db');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -426,6 +426,128 @@ app.get('/api/leaderboards/quiz/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[quiz leaderboard] error:', err.message);
     res.status(500).json({ errors: ['Could not load this leaderboard.'] });
+  }
+});
+
+// ===================== TEACHER QUESTION TOOLS (Phase 4) =====================
+// CSV batch import: preview -> confirm -> import. Admin/teacher only.
+// The client parses the CSV file and sends rows as JSON, but the server
+// re-validates EVERYTHING — the client's checks are only cosmetic.
+
+const IMPORT_MAX_ROWS = 500;
+
+async function validateImportRows(rawRows) {
+  const { rows: quizzes } = await query('SELECT id, title FROM quizzes WHERE is_public = TRUE');
+  const quizByTitle = {};
+  for (const q of quizzes) quizByTitle[q.title.trim().toLowerCase()] = q.id;
+
+  const valid = [];
+  const invalid = [];
+  const rows = Array.isArray(rawRows) ? rawRows : [];
+  rows.forEach((row, idx) => {
+    const errors = [];
+    const r = row || {};
+
+    const question = typeof r.question_text === 'string' ? r.question_text.trim() : '';
+    if (!question) errors.push('Question text is empty.');
+    else if (question.length > 500) errors.push('Question text is over 500 characters.');
+
+    const choices = Array.isArray(r.choices) ? r.choices : [];
+    const clean = choices.map(c => (typeof c === 'string' ? c.trim() : ''));
+    if (choices.length !== 4) errors.push('Each question needs exactly 4 choices (got ' + choices.length + ').');
+    clean.forEach((c, i) => {
+      if (!c) errors.push('Choice ' + (i + 1) + ' is empty.');
+      else if (c.length > 200) errors.push('Choice ' + (i + 1) + ' is over 200 characters.');
+    });
+    if (clean.filter(Boolean).length === 4) {
+      const lowered = clean.map(c => c.toLowerCase());
+      if (new Set(lowered).size !== 4) errors.push('Choices must all be different from each other.');
+    }
+
+    const ci = Number.parseInt(r.correct_index, 10);
+    if (!Number.isInteger(ci) || ci < 1 || ci > 4) errors.push('Correct answer must be 1, 2, 3, or 4.');
+
+    const title = typeof r.quiz_title === 'string' ? r.quiz_title.trim() : '';
+    if (!title) errors.push('Quiz name is empty.');
+    else if (!quizByTitle[title.toLowerCase()]) errors.push('No quiz named "' + title + '" exists.');
+
+    const entry = { row: idx + 1, question_text: question, choices: clean, correct_index: ci, quiz_title: title };
+    if (errors.length) invalid.push(Object.assign({}, entry, { errors }));
+    else valid.push(Object.assign({}, entry, { quiz_id: quizByTitle[title.toLowerCase()] }));
+  });
+  return { valid, invalid };
+}
+
+// Step 1: preview — validate rows, flag bad ones, save NOTHING.
+app.post('/api/questions/import/preview', requireRole('admin', 'teacher'), async (req, res) => {
+  try {
+    const rows = (req.body && req.body.rows) || [];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ errors: ['No rows to check.'] });
+    }
+    if (rows.length > IMPORT_MAX_ROWS) {
+      return res.status(400).json({ errors: ['Too many rows — max ' + IMPORT_MAX_ROWS + ' per upload.'] });
+    }
+    const { valid, invalid } = await validateImportRows(rows);
+    res.json({ total: rows.length, valid_count: valid.length, invalid_count: invalid.length, valid, invalid });
+  } catch (err) {
+    console.error('[import preview] error:', err.message);
+    res.status(500).json({ errors: ['Could not check this file.'] });
+  }
+});
+
+// Step 2: import — re-validates, then inserts everything in ONE transaction.
+// If anything fails mid-way, the whole import is rolled back (all-or-nothing).
+app.post('/api/questions/import', requireRole('admin', 'teacher'), async (req, res) => {
+  try {
+    const rows = (req.body && req.body.rows) || [];
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ errors: ['No rows to import.'] });
+    }
+    if (rows.length > IMPORT_MAX_ROWS) {
+      return res.status(400).json({ errors: ['Too many rows — max ' + IMPORT_MAX_ROWS + ' per import.'] });
+    }
+    const { valid, invalid } = await validateImportRows(rows);
+    if (invalid.length) {
+      return res.status(400).json({
+        errors: ['Some rows failed validation, so nothing was imported. Fix or remove them and try again.'],
+        invalid
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      let imported = 0;
+      for (const r of valid) {
+        const q = await client.query(
+          'INSERT INTO questions (quiz_id, question_text, is_active) VALUES ($1, $2, TRUE) RETURNING id',
+          [r.quiz_id, r.question_text]
+        );
+        const qid = q.rows[0].id;
+        // Correct answer is stored FIRST (same as seed data). The server
+        // shuffles options before showing them, so players can't guess by position.
+        const correctChoice = r.choices[r.correct_index - 1];
+        const ordered = [correctChoice].concat(r.choices.filter((_, i) => i !== r.correct_index - 1));
+        for (let i = 0; i < ordered.length; i++) {
+          await client.query(
+            'INSERT INTO options (question_id, option_text, is_correct) VALUES ($1, $2, $3)',
+            [qid, ordered[i], i === 0]
+          );
+        }
+        imported++;
+      }
+      await client.query('COMMIT');
+      res.json({ imported });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('[import] error:', err.message);
+    res.status(500).json({ errors: ['Import failed — nothing was saved.'] });
   }
 });
 
